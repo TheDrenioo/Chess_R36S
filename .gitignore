@@ -1,0 +1,17 @@
+# CMake build files
+build/
+cmake-build-*/
+
+# Compiled binaries
+*.exe
+*.o
+*.obj
+*.dll
+*.a
+
+# VS Code
+.vscode/
+
+# Temporary files
+*.tmp
+*.log
