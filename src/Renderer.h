@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include "ChessGame.h"
+#include "Menu.h"
 
 #include <SDL.h>
 
@@ -11,6 +12,9 @@
 class Renderer
 {
 public:
+    void renderMenu(
+    const Menu& menu);
+
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
 
@@ -40,6 +44,24 @@ private:
 
     SDL_Renderer* renderer =
         nullptr;
+
+    void drawMenuText(
+        const std::string& text,
+        int x,
+        int y,
+        int scale);
+
+    void drawCharacter(
+        char character,
+        int x,
+        int y,
+        int scale);
+
+    void drawMenuItem(
+        const std::string& text,
+        int x,
+        int y,
+        bool selected);
 
     std::map<
         std::string,

@@ -1109,3 +1109,737 @@ void Renderer::render(
     SDL_RenderPresent(
         renderer);
 }
+
+// ============================================================
+// SIMPLE MENU FONT
+// ============================================================
+
+void Renderer::drawCharacter(
+    char character,
+    int x,
+    int y,
+    int scale)
+{
+    const int segmentWidth =
+        4 * scale;
+
+    const int segmentHeight =
+        6 * scale;
+
+    SDL_Rect rect;
+
+    auto horizontal =
+        [&](int offsetY)
+    {
+        rect = {
+            x,
+            y + offsetY,
+            segmentWidth,
+            scale
+        };
+
+        SDL_RenderFillRect(
+            renderer,
+            &rect);
+    };
+
+    auto verticalLeft =
+        [&](int offsetY)
+    {
+        rect = {
+            x,
+            y + offsetY,
+            scale,
+            segmentHeight / 2
+        };
+
+        SDL_RenderFillRect(
+            renderer,
+            &rect);
+    };
+
+    auto verticalRight =
+        [&](int offsetY)
+    {
+        rect = {
+            x +
+                segmentWidth -
+                scale,
+
+            y + offsetY,
+
+            scale,
+
+            segmentHeight / 2
+        };
+
+        SDL_RenderFillRect(
+            renderer,
+            &rect);
+    };
+
+    switch (character)
+    {
+        case 'A':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+
+            verticalLeft(0);
+            verticalRight(0);
+
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'B':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'C':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+            break;
+
+        case 'D':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'E':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+            break;
+
+        case 'F':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+            break;
+
+        case 'G':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            horizontal(
+                segmentHeight / 2);
+
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'H':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            horizontal(
+                segmentHeight / 2);
+            break;
+
+        case 'I':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            rect = {
+                x +
+                    segmentWidth / 2 -
+                    scale / 2,
+
+                y,
+
+                scale,
+
+                segmentHeight
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &rect);
+            break;
+
+        case 'L':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            horizontal(
+                segmentHeight);
+            break;
+
+        case 'M':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            rect = {
+                x +
+                    segmentWidth / 2 -
+                    scale / 2,
+
+                y,
+
+                scale,
+
+                segmentHeight / 2
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &rect);
+            break;
+
+        case 'N':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'O':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'P':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            break;
+
+        case 'R':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight / 2,
+
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'S':
+            horizontal(0);
+            horizontal(
+                segmentHeight / 2);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalRight(
+                segmentHeight / 2);
+            break;
+
+        case 'T':
+            horizontal(0);
+
+            rect = {
+                x +
+                    segmentWidth / 2 -
+                    scale / 2,
+
+                y,
+
+                scale,
+
+                segmentHeight
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &rect);
+            break;
+
+        case 'U':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            horizontal(
+                segmentHeight);
+            break;
+
+        case 'V':
+            verticalLeft(0);
+            verticalRight(0);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y +
+                    segmentHeight / 2,
+
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight / 2,
+
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'W':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            horizontal(
+                segmentHeight);
+            break;
+
+        case 'X':
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth,
+                y,
+                x,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'Y':
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y,
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight / 2);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth,
+                y,
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight / 2);
+
+            rect = {
+                x +
+                    segmentWidth / 2 -
+                    scale / 2,
+
+                y +
+                    segmentHeight / 2,
+
+                scale,
+
+                segmentHeight / 2
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &rect);
+            break;
+
+        case ' ':
+            break;
+
+        case ':':
+        {
+            SDL_Rect topDot = {
+                x + scale,
+                y +
+                    segmentHeight / 3,
+
+                scale,
+                scale
+            };
+
+            SDL_Rect bottomDot = {
+                x + scale,
+                y +
+                    2 *
+                    segmentHeight /
+                    3,
+
+                scale,
+                scale
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &topDot);
+
+            SDL_RenderFillRect(
+                renderer,
+                &bottomDot);
+
+            break;
+        }
+
+        case '>':
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight / 2);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight / 2,
+
+                x,
+                y +
+                    segmentHeight);
+            break;
+
+        default:
+            break;
+    }
+}
+
+void Renderer::drawMenuText(
+    const std::string& text,
+    int x,
+    int y,
+    int scale)
+{
+    int cursorX =
+        x;
+
+    for (char character : text)
+    {
+        drawCharacter(
+            character,
+            cursorX,
+            y,
+            scale);
+
+        cursorX +=
+            6 * scale;
+    }
+}
+
+void Renderer::drawMenuItem(
+    const std::string& text,
+    int x,
+    int y,
+    bool selected)
+{
+    if (selected)
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            255,
+            215,
+            0,
+            255);
+
+        drawMenuText(
+            ">",
+            x - 28,
+            y,
+            3);
+    }
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        selected
+            ? 255
+            : 220,
+        selected
+            ? 215
+            : 220,
+        selected
+            ? 0
+            : 220,
+        255);
+
+    drawMenuText(
+        text,
+        x,
+        y,
+        3);
+}
+
+// ============================================================
+// MENU RENDERER
+// ============================================================
+
+void Renderer::renderMenu(
+    const Menu& menu)
+{
+    SDL_SetRenderDrawColor(
+        renderer,
+        24,
+        24,
+        24,
+        255);
+
+    SDL_RenderClear(
+        renderer);
+
+    // --------------------------------------------------------
+    // TITLE
+    // --------------------------------------------------------
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        238,
+        238,
+        210,
+        255);
+
+    drawMenuText(
+        "CHESS R36S",
+        190,
+        55,
+        5);
+
+    // Decorative line
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        118,
+        150,
+        86,
+        255);
+
+    SDL_Rect lineRect = {
+        140,
+        115,
+        360,
+        4
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &lineRect);
+
+    // ========================================================
+    // MAIN MENU
+    // ========================================================
+
+    if (
+        menu.getScreen() ==
+        MenuScreen::Main)
+    {
+        int selected =
+            menu.getSelectedOption();
+
+        drawMenuItem(
+            "PLAY VS COMPUTER",
+            180,
+            170,
+            selected == 0);
+
+        drawMenuItem(
+            "TWO PLAYERS",
+            180,
+            225,
+            selected == 1);
+
+        drawMenuItem(
+            "SETTINGS",
+            180,
+            280,
+            selected == 2);
+
+        drawMenuItem(
+            "EXIT",
+            180,
+            335,
+            selected == 3);
+    }
+
+    // ========================================================
+    // SETTINGS
+    // ========================================================
+
+    else
+    {
+        int selected =
+            menu.getSelectedOption();
+
+        const GameConfig& config =
+            menu.getConfig();
+
+        std::string colorText =
+            config.humanIsWhite
+                ? "COLOR: WHITE"
+                : "COLOR: BLACK";
+
+        std::string difficultyText =
+            "DIFFICULTY: ";
+
+        switch (config.difficulty)
+        {
+            case Difficulty::Easy:
+                difficultyText +=
+                    "EASY";
+                break;
+
+            case Difficulty::Medium:
+                difficultyText +=
+                    "MEDIUM";
+                break;
+
+            case Difficulty::Hard:
+                difficultyText +=
+                    "HARD";
+                break;
+
+            case Difficulty::Expert:
+                difficultyText +=
+                    "EXPERT";
+                break;
+
+            case Difficulty::Master:
+                difficultyText +=
+                    "MASTER";
+                break;
+        }
+
+        drawMenuItem(
+            colorText,
+            145,
+            180,
+            selected == 0);
+
+        drawMenuItem(
+            difficultyText,
+            145,
+            245,
+            selected == 1);
+
+        drawMenuItem(
+            "BACK",
+            145,
+            310,
+            selected == 2);
+    }
+
+    SDL_RenderPresent(
+        renderer);
+}

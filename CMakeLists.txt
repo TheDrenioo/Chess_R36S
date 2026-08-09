@@ -13,6 +13,7 @@ add_executable(
     src/Renderer.cpp
     src/AudioManager.cpp
     src/StockfishEngine.cpp
+    src/Menu.cpp
 )
 
 target_include_directories(
