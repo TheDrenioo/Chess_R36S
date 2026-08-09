@@ -27,6 +27,61 @@ enum class AppState
 // COMPUTER MOVE
 // ============================================================
 
+void updateClockAfterMove(
+    bool previousTurn,
+    ChessGame& game,
+    ChessClock& chessClock)
+{
+    // No actual move occurred.
+    if (
+        previousTurn ==
+        game.isWhiteTurn())
+    {
+        return;
+    }
+
+    if (!chessClock.isEnabled())
+    {
+        return;
+    }
+
+    // If the move ended the game,
+    // the clock should remain stopped.
+    if (game.isGameOver())
+    {
+        chessClock.stop();
+
+        return;
+    }
+
+    // ========================================================
+    // FIRST MOVE OF THE GAME
+    //
+    // White has just moved.
+    // Start the clock and immediately switch it to Black.
+    // ========================================================
+
+    if (!chessClock.isRunning())
+    {
+        if (previousTurn)
+        {
+            // Start on White with zero elapsed time.
+            chessClock.start(true);
+
+            // Apply White's increment and pass clock to Black.
+            chessClock.onMove();
+        }
+
+        return;
+    }
+
+    // ========================================================
+    // NORMAL MOVE
+    // ========================================================
+
+    chessClock.onMove();
+}
+
 void makeComputerMove(
     ChessGame& game,
     StockfishEngine& stockfish,
@@ -99,15 +154,44 @@ void makeComputerMove(
         game.makeUCIMove(
             bestMove);
 
-    if (
-        previousTurn !=
-        game.isWhiteTurn())
-    {
-        chessClock.onMove();
-    }
+    updateClockAfterMove(
+        previousTurn,
+        game,
+        chessClock);
 
     audio.playMoveSound(
         sound);
+}
+
+void moveVisualCursor(
+    int& cursorRow,
+    int& cursorCol,
+    int visualRowDirection,
+    int visualColDirection,
+    bool boardFlipped)
+{
+    if (boardFlipped)
+    {
+        visualRowDirection =
+            -visualRowDirection;
+
+        visualColDirection =
+            -visualColDirection;
+    }
+
+    cursorRow =
+        std::clamp(
+            cursorRow +
+                visualRowDirection,
+            0,
+            7);
+
+    cursorCol =
+        std::clamp(
+            cursorCol +
+                visualColDirection,
+            0,
+            7);
 }
 
 // ============================================================
@@ -337,6 +421,19 @@ int main(
                                 currentConfig =
                                     menu.getConfig();
 
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::PlayerVsComputer)
+                                {
+                                    currentConfig.opponentName =
+                                        "STOCKFISH";
+                                }
+                                else
+                                {
+                                    currentConfig.opponentName =
+                                        "PLAYER 2";
+                                }
+
                                 game.newGame();
 
                                 chessClock.configure(
@@ -344,8 +441,6 @@ int main(
                                         .getInitialTimeSeconds(),
                                     currentConfig
                                         .getIncrementSeconds());
-
-                                chessClock.start(true);
 
                                 cursorRow = 7;
                                 cursorCol = 4;
@@ -459,6 +554,19 @@ int main(
                                 currentConfig =
                                     menu.getConfig();
 
+                            if (
+                                    currentConfig.mode ==
+                                    GameMode::PlayerVsComputer)
+                                {
+                                    currentConfig.opponentName =
+                                        "STOCKFISH";
+                                }
+                                else
+                                {
+                                    currentConfig.opponentName =
+                                        "PLAYER 2";
+                                }
+
                                 game.newGame();
 
                                 chessClock.configure(
@@ -466,8 +574,6 @@ int main(
                                         .getInitialTimeSeconds(),
                                     currentConfig
                                         .getIncrementSeconds());
-
-                                chessClock.start(true);
 
                                 cursorRow = 7;
                                 cursorCol = 4;
@@ -572,12 +678,10 @@ int main(
                                 MoveSound sound =
                                     game.confirmPromotion();
 
-                                if (
-                                    previousTurn !=
-                                    game.isWhiteTurn())
-                                {
-                                    chessClock.onMove();
-                                }
+                                updateClockAfterMove(
+                                    previousTurn,
+                                    game,
+                                    chessClock);
 
                                 audio.playMoveSound(
                                     sound);
@@ -627,10 +731,19 @@ int main(
 
                             if (!game.isGameOver())
                             {
-                                cursorRow =
-                                    std::max(
-                                        0,
-                                        cursorRow - 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    -1,
+                                    0,
+                                    flipped);
                             }
 
                             break;
@@ -639,10 +752,19 @@ int main(
 
                             if (!game.isGameOver())
                             {
-                                cursorRow =
-                                    std::min(
-                                        7,
-                                        cursorRow + 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    1,
+                                    0,
+                                    flipped);
                             }
 
                             break;
@@ -651,10 +773,19 @@ int main(
 
                             if (!game.isGameOver())
                             {
-                                cursorCol =
-                                    std::max(
-                                        0,
-                                        cursorCol - 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    0,
+                                    -1,
+                                    flipped);
                             }
 
                             break;
@@ -663,10 +794,19 @@ int main(
 
                             if (!game.isGameOver())
                             {
-                                cursorCol =
-                                    std::min(
-                                        7,
-                                        cursorCol + 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    0,
+                                    1,
+                                    flipped);
                             }
 
                             break;
@@ -717,12 +857,12 @@ int main(
                                     sound);
                             }
 
-                            if (
-                                !game.isPromotionPending() &&
-                                previousTurn !=
-                                    game.isWhiteTurn())
+                            if (!game.isPromotionPending())
                             {
-                                chessClock.onMove();
+                                updateClockAfterMove(
+                                    previousTurn,
+                                    game,
+                                    chessClock);
                             }
 
                             if (
@@ -756,7 +896,6 @@ int main(
                                 currentConfig
                                     .getIncrementSeconds());
 
-                            chessClock.start(true);
 
                             cursorRow = 7;
                             cursorCol = 4;
@@ -816,12 +955,10 @@ int main(
                                 MoveSound sound =
                                     game.confirmPromotion();
 
-                                if (
-                                    previousTurn !=
-                                    game.isWhiteTurn())
-                                {
-                                    chessClock.onMove();
-                                }
+                                updateClockAfterMove(
+                                    previousTurn,
+                                    game,
+                                    chessClock);
 
                                 audio.playMoveSound(
                                     sound);
@@ -855,22 +992,41 @@ int main(
 
                             if (!game.isGameOver())
                             {
-                                cursorRow =
-                                    std::max(
-                                        0,
-                                        cursorRow - 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    -1,
+                                    0,
+                                    flipped);
                             }
 
                             break;
+
 
                         case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
 
                             if (!game.isGameOver())
                             {
-                                cursorRow =
-                                    std::min(
-                                        7,
-                                        cursorRow + 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    1,
+                                    0,
+                                    flipped);
                             }
 
                             break;
@@ -878,23 +1034,41 @@ int main(
                         case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
 
                             if (!game.isGameOver())
-                            {
-                                cursorCol =
-                                    std::max(
-                                        0,
-                                        cursorCol - 1);
-                            }
+                                {
+                                    bool flipped =
+                                        currentConfig.mode ==
+                                            GameMode::
+                                                PlayerVsComputer &&
+                                        !currentConfig
+                                            .humanIsWhite;
 
-                            break;
+                                    moveVisualCursor(
+                                        cursorRow,
+                                        cursorCol,
+                                        0,
+                                        -1,
+                                        flipped);
+                                }
+
+                                break;
 
                         case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 
                             if (!game.isGameOver())
                             {
-                                cursorCol =
-                                    std::min(
-                                        7,
-                                        cursorCol + 1);
+                                bool flipped =
+                                    currentConfig.mode ==
+                                        GameMode::
+                                            PlayerVsComputer &&
+                                    !currentConfig
+                                        .humanIsWhite;
+
+                                moveVisualCursor(
+                                    cursorRow,
+                                    cursorCol,
+                                    0,
+                                    1,
+                                    flipped);
                             }
 
                             break;
@@ -944,12 +1118,12 @@ int main(
                                     sound);
                             }
 
-                            if (
-                                !game.isPromotionPending() &&
-                                previousTurn !=
-                                    game.isWhiteTurn())
+                            if (!game.isPromotionPending())
                             {
-                                chessClock.onMove();
+                                updateClockAfterMove(
+                                    previousTurn,
+                                    game,
+                                    chessClock);
                             }
 
                             if (
@@ -982,8 +1156,6 @@ int main(
                                     .getInitialTimeSeconds(),
                                 currentConfig
                                     .getIncrementSeconds());
-
-                            chessClock.start(true);
 
                             cursorRow = 7;
                             cursorCol = 4;
@@ -1030,11 +1202,30 @@ int main(
         }
         else
         {
+            bool boardFlipped = false;
+
+            if (
+                currentConfig.mode ==
+                    GameMode::PlayerVsComputer)
+            {
+                boardFlipped =
+                    !currentConfig.humanIsWhite;
+            }
+
+            bool opponentIsWhite =
+                currentConfig.mode ==
+                    GameMode::PlayerVsComputer
+                    ? !currentConfig.humanIsWhite
+                    : false;
+
             renderer.render(
                 game,
                 chessClock,
                 cursorRow,
-                cursorCol);
+                cursorCol,
+                boardFlipped,
+                currentConfig.opponentName,
+                opponentIsWhite);
 
             // ================================================
             // STOCKFISH

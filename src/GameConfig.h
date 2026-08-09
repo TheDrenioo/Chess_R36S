@@ -1,6 +1,8 @@
 #ifndef GAME_CONFIG_H
 #define GAME_CONFIG_H
 
+#include <string>
+
 enum class GameMode
 {
     PlayerVsComputer,
@@ -39,6 +41,9 @@ struct GameConfig
 
     TimeControl timeControl =
         TimeControl::Rapid10;
+
+    std::string opponentName =
+        "STOCKFISH";
 
     int getStockfishSkill() const
     {

@@ -70,6 +70,12 @@ void ChessGame::newGame()
 
     legalMoves.clear();
 
+    lastMoveFromRow = -1;
+    lastMoveFromCol = -1;
+
+    lastMoveToRow = -1;
+    lastMoveToCol = -1;
+
     enPassantRow = -1;
     enPassantCol = -1;
 
@@ -176,6 +182,35 @@ int ChessGame::getSelectedRow() const
 int ChessGame::getSelectedCol() const
 {
     return selectedCol;
+}
+
+bool ChessGame::hasLastMove() const
+{
+    return
+        lastMoveFromRow >= 0 &&
+        lastMoveFromCol >= 0 &&
+        lastMoveToRow >= 0 &&
+        lastMoveToCol >= 0;
+}
+
+int ChessGame::getLastMoveFromRow() const
+{
+    return lastMoveFromRow;
+}
+
+int ChessGame::getLastMoveFromCol() const
+{
+    return lastMoveFromCol;
+}
+
+int ChessGame::getLastMoveToRow() const
+{
+    return lastMoveToRow;
+}
+
+int ChessGame::getLastMoveToCol() const
+{
+    return lastMoveToCol;
 }
 
 const std::vector<std::string>&
@@ -1586,6 +1621,18 @@ MoveSound ChessGame::executeMove(
     applyMoveToBoard(
         move,
         false);
+
+    lastMoveFromRow =
+    move.fromRow;
+
+    lastMoveFromCol =
+        move.fromCol;
+
+    lastMoveToRow =
+        move.toRow;
+
+    lastMoveToCol =
+        move.toCol;
 
     if (
         capture &&

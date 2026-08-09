@@ -14,7 +14,15 @@ public:
     ChessGame();
 
     void newGame();
-    
+
+    bool hasLastMove() const;
+
+    int getLastMoveFromRow() const;
+    int getLastMoveFromCol() const;
+
+    int getLastMoveToRow() const;
+    int getLastMoveToCol() const;
+        
     std::string getFEN() const;
 
     MoveSound makeUCIMove(
@@ -96,6 +104,12 @@ private:
 
     int selectedRow = -1;
     int selectedCol = -1;
+
+    int lastMoveFromRow = -1;
+    int lastMoveFromCol = -1;
+
+    int lastMoveToRow = -1;
+    int lastMoveToCol = -1;
 
     std::vector<Move> legalMoves;
 

@@ -43,7 +43,10 @@ public:
         const ChessGame& game,
         const ChessClock& chessClock,
         int cursorRow,
-        int cursorCol);
+        int cursorCol,
+        bool boardFlipped,
+        const std::string& opponentName,
+        bool opponentIsWhite);
 
     SDL_Renderer*
     getSDLRenderer();
@@ -54,6 +57,18 @@ private:
 
     SDL_Renderer* renderer =
         nullptr;
+
+    int screenRow(
+        int logicalRow,
+        bool flipped) const;
+
+    int screenCol(
+        int logicalCol,
+        bool flipped) const;
+
+    void drawOpponentName(
+        const std::string& opponentName,
+        bool opponentIsWhite);
 
     void drawMenuText(
         const std::string& text,
@@ -107,25 +122,36 @@ private:
     std::string getPieceKey(
         const Piece& piece) const;
 
-    void drawBoard();
+    void drawBoard(
+        bool flipped);
 
     void drawPieces(
-        const ChessGame& game);
+        const ChessGame& game,
+        bool flipped);
 
     void drawSelectedSquare(
-        const ChessGame& game);
+        const ChessGame& game,
+        bool flipped);
 
     void drawLegalMoves(
-        const ChessGame& game);
+        const ChessGame& game,
+        bool flipped);
 
     void drawCursor(
         int row,
-        int col);
+        int col,
+        bool flipped);
 
     void drawCheckIndicator(
-        const ChessGame& game);
+        const ChessGame& game,
+        bool flipped);
 
-    void drawCoordinates();
+    void drawCoordinates(
+        bool flipped);
+
+    void drawLastMoveHighlight(
+        const ChessGame& game,
+        bool flipped);
 
     void drawPanels(
         const ChessGame& game);

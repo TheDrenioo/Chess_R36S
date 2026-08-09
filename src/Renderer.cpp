@@ -191,22 +191,50 @@ std::string Renderer::getPieceKey(
     return key;
 }
 
+    int Renderer::screenRow(
+        int logicalRow,
+        bool flipped) const
+    {
+        if (flipped)
+        {
+            return 7 - logicalRow;
+        }
+
+        return logicalRow;
+    }
+
+    int Renderer::screenCol(
+        int logicalCol,
+        bool flipped) const
+    {
+        if (flipped)
+        {
+            return 7 - logicalCol;
+        }
+
+        return logicalCol;
+    }
+
 // ============================================================
 // BOARD
 // ============================================================
 
-void Renderer::drawBoard()
+void Renderer::drawBoard(
+    bool flipped)
 {
-    for (int row = 0;
-         row < 8;
-         row++)
+    for (int logicalRow = 0;
+         logicalRow < 8;
+         logicalRow++)
     {
-        for (int col = 0;
-             col < 8;
-             col++)
+        for (int logicalCol = 0;
+             logicalCol < 8;
+             logicalCol++)
         {
             bool light =
-                (row + col) % 2 == 0;
+                (logicalRow +
+                 logicalCol) %
+                    2 ==
+                0;
 
             if (light)
             {
@@ -227,12 +255,24 @@ void Renderer::drawBoard()
                     255);
             }
 
+            int row =
+                screenRow(
+                    logicalRow,
+                    flipped);
+
+            int col =
+                screenCol(
+                    logicalCol,
+                    flipped);
+
             SDL_Rect square = {
                 BOARD_X +
-                    col * TILE_SIZE,
+                    col *
+                        TILE_SIZE,
 
                 BOARD_Y +
-                    row * TILE_SIZE,
+                    row *
+                        TILE_SIZE,
 
                 TILE_SIZE,
                 TILE_SIZE
@@ -250,7 +290,8 @@ void Renderer::drawBoard()
 // ============================================================
 
 void Renderer::drawPieces(
-    const ChessGame& game)
+    const ChessGame& game,
+    bool flipped)
 {
     constexpr int padding = 3;
 
@@ -286,13 +327,25 @@ void Renderer::drawPieces(
                 continue;
             }
 
+            int screenR =
+                screenRow(
+                    row,
+                    flipped);
+
+            int screenC =
+                screenCol(
+                    col,
+                    flipped);
+
             SDL_Rect destination = {
                 BOARD_X +
-                    col * TILE_SIZE +
+                    screenC *
+                        TILE_SIZE +
                     padding,
 
                 BOARD_Y +
-                    row * TILE_SIZE +
+                    screenR *
+                        TILE_SIZE +
                     padding,
 
                 TILE_SIZE -
@@ -315,8 +368,88 @@ void Renderer::drawPieces(
 // SELECTION
 // ============================================================
 
+void Renderer::drawLastMoveHighlight(
+    const ChessGame& game,
+    bool flipped)
+{
+    if (!game.hasLastMove())
+    {
+        return;
+    }
+
+    SDL_SetRenderDrawBlendMode(
+        renderer,
+        SDL_BLENDMODE_BLEND);
+
+    // Chess.com-like yellow overlay
+    SDL_SetRenderDrawColor(
+        renderer,
+        246,
+        246,
+        105,
+        135);
+
+
+    int fromRow =
+        screenRow(
+            game.getLastMoveFromRow(),
+            flipped);
+
+    int fromCol =
+        screenCol(
+            game.getLastMoveFromCol(),
+            flipped);
+
+    int toRow =
+        screenRow(
+            game.getLastMoveToRow(),
+            flipped);
+
+    int toCol =
+        screenCol(
+            game.getLastMoveToCol(),
+            flipped);
+
+    // Origin square
+    SDL_Rect fromSquare = {
+        BOARD_X +
+            fromCol * TILE_SIZE,
+
+        BOARD_Y +
+            fromRow * TILE_SIZE,
+
+        TILE_SIZE,
+        TILE_SIZE
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &fromSquare);
+
+    // Destination square
+    SDL_Rect toSquare = {
+        BOARD_X +
+            toCol * TILE_SIZE,
+
+        BOARD_Y +
+            toRow * TILE_SIZE,
+
+        TILE_SIZE,
+        TILE_SIZE
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &toSquare);
+
+    SDL_SetRenderDrawBlendMode(
+        renderer,
+        SDL_BLENDMODE_NONE);
+}
+
 void Renderer::drawSelectedSquare(
-    const ChessGame& game)
+    const ChessGame& game,
+    bool flipped)
 {
     if (!game.hasSelectedPiece())
     {
@@ -330,14 +463,22 @@ void Renderer::drawSelectedSquare(
         0,
         255);
 
+    int row =
+        screenRow(
+            game.getSelectedRow(),
+            flipped);
+
+    int col =
+        screenCol(
+            game.getSelectedCol(),
+            flipped);
+
     SDL_Rect rect = {
         BOARD_X +
-            game.getSelectedCol() *
-                TILE_SIZE,
+            col * TILE_SIZE,
 
         BOARD_Y +
-            game.getSelectedRow() *
-                TILE_SIZE,
+            row * TILE_SIZE,
 
         TILE_SIZE,
         TILE_SIZE
@@ -540,7 +681,8 @@ void Renderer::drawMoveHistory(
 }
 
 void Renderer::drawLegalMoves(
-    const ChessGame& game)
+    const ChessGame& game,
+    bool flipped)
 {
     SDL_SetRenderDrawBlendMode(
         renderer,
@@ -549,16 +691,24 @@ void Renderer::drawLegalMoves(
     for (const Move& move :
          game.getLegalMoves())
     {
+        int screenR =
+            screenRow(
+                move.toRow,
+                flipped);
+
+        int screenC =
+            screenCol(
+                move.toCol,
+                flipped);
+
         int centerX =
             BOARD_X +
-            move.toCol *
-                TILE_SIZE +
+            screenC * TILE_SIZE +
             TILE_SIZE / 2;
 
         int centerY =
             BOARD_Y +
-            move.toRow *
-                TILE_SIZE +
+            screenR * TILE_SIZE +
             TILE_SIZE / 2;
 
         bool capture =
@@ -593,13 +743,11 @@ void Renderer::drawLegalMoves(
 
             SDL_Rect rect = {
                 BOARD_X +
-                    move.toCol *
-                        TILE_SIZE +
+                    screenC * TILE_SIZE +
                     4,
 
                 BOARD_Y +
-                    move.toRow *
-                        TILE_SIZE +
+                    screenR * TILE_SIZE +
                     4,
 
                 TILE_SIZE - 8,
@@ -634,25 +782,38 @@ void Renderer::drawLegalMoves(
 
 void Renderer::drawCursor(
     int row,
-    int col)
+    int col,
+    bool flipped)
 {
+    int visualRow =
+        screenRow(
+            row,
+            flipped);
+
+    int visualCol =
+        screenCol(
+            col,
+            flipped);
+
+    SDL_Rect rect = {
+        BOARD_X +
+            visualCol *
+                TILE_SIZE,
+
+        BOARD_Y +
+            visualRow *
+                TILE_SIZE,
+
+        TILE_SIZE,
+        TILE_SIZE
+    };
+
     SDL_SetRenderDrawColor(
         renderer,
         255,
         215,
         0,
         255);
-
-    SDL_Rect rect = {
-        BOARD_X +
-            col * TILE_SIZE,
-
-        BOARD_Y +
-            row * TILE_SIZE,
-
-        TILE_SIZE,
-        TILE_SIZE
-    };
 
     for (int i = 0;
          i < 3;
@@ -676,10 +837,12 @@ void Renderer::drawCursor(
 // ============================================================
 
 void Renderer::drawCheckIndicator(
-    const ChessGame& game)
+    const ChessGame& game,
+    bool flipped)
 {
     bool checkedWhite;
 
+    // Determine which king is in check.
     if (game.kingInCheck(true))
     {
         checkedWhite = true;
@@ -693,8 +856,12 @@ void Renderer::drawCheckIndicator(
         return;
     }
 
-    int kingRow = -1;
-    int kingCol = -1;
+    // --------------------------------------------------------
+    // Find king using LOGICAL board coordinates
+    // --------------------------------------------------------
+
+    int logicalKingRow = -1;
+    int logicalKingCol = -1;
 
     for (int row = 0;
          row < 8;
@@ -714,16 +881,43 @@ void Renderer::drawCheckIndicator(
                 piece.white ==
                     checkedWhite)
             {
-                kingRow = row;
-                kingCol = col;
+                logicalKingRow = row;
+                logicalKingCol = col;
+
+                break;
             }
+        }
+
+        if (logicalKingRow >= 0)
+        {
+            break;
         }
     }
 
-    if (kingRow < 0)
+    if (
+        logicalKingRow < 0 ||
+        logicalKingCol < 0)
     {
         return;
     }
+
+    // --------------------------------------------------------
+    // Convert logical position to VISUAL position
+    // --------------------------------------------------------
+
+    int visualKingRow =
+        screenRow(
+            logicalKingRow,
+            flipped);
+
+    int visualKingCol =
+        screenCol(
+            logicalKingCol,
+            flipped);
+
+    // --------------------------------------------------------
+    // Draw red check square
+    // --------------------------------------------------------
 
     SDL_SetRenderDrawBlendMode(
         renderer,
@@ -734,15 +928,15 @@ void Renderer::drawCheckIndicator(
         220,
         40,
         40,
-        115);
+        120);
 
-    SDL_Rect rect = {
+    SDL_Rect checkSquare = {
         BOARD_X +
-            kingCol *
+            visualKingCol *
                 TILE_SIZE,
 
         BOARD_Y +
-            kingRow *
+            visualKingRow *
                 TILE_SIZE,
 
         TILE_SIZE,
@@ -751,7 +945,7 @@ void Renderer::drawCheckIndicator(
 
     SDL_RenderFillRect(
         renderer,
-        &rect);
+        &checkSquare);
 
     SDL_SetRenderDrawBlendMode(
         renderer,
@@ -998,17 +1192,34 @@ void Renderer::drawNumber(
     }
 }
 
-void Renderer::drawCoordinates()
+void Renderer::drawCoordinates(
+    bool flipped)
 {
-    for (int row = 0;
-         row < 8;
-         row++)
+    for (int visualRow = 0;
+         visualRow < 8;
+         visualRow++)
     {
+        int logicalRow =
+            flipped
+                ? 7 - visualRow
+                : visualRow;
+
         int rank =
-            8 - row;
+            8 -
+            logicalRow;
+
+        int logicalCol =
+            flipped
+                ? 7
+                : 0;
 
         bool light =
-            row % 2 == 0;
+            (
+                logicalRow +
+                logicalCol
+            ) %
+                2 ==
+            0;
 
         if (light)
         {
@@ -1032,20 +1243,38 @@ void Renderer::drawCoordinates()
         drawNumber(
             rank,
             BOARD_X + 4,
-            row * TILE_SIZE +
+            BOARD_Y +
+                visualRow *
+                    TILE_SIZE +
                 4);
     }
 
-    for (int col = 0;
-         col < 8;
-         col++)
+    for (int visualCol = 0;
+         visualCol < 8;
+         visualCol++)
     {
+        int logicalCol =
+            flipped
+                ? 7 - visualCol
+                : visualCol;
+
         char file =
             static_cast<char>(
-                'a' + col);
+                'a' +
+                logicalCol);
+
+        int logicalRow =
+            flipped
+                ? 0
+                : 7;
 
         bool light =
-            (7 + col) % 2 == 0;
+            (
+                logicalRow +
+                logicalCol
+            ) %
+                2 ==
+            0;
 
         if (light)
         {
@@ -1068,10 +1297,16 @@ void Renderer::drawCoordinates()
 
         drawLetter(
             file,
+
             BOARD_X +
-                col * TILE_SIZE +
-                TILE_SIZE - 11,
-            BOARD_SIZE - 12);
+                visualCol *
+                    TILE_SIZE +
+                TILE_SIZE -
+                11,
+
+            BOARD_Y +
+                BOARD_SIZE -
+                12);
     }
 }
 
@@ -1216,11 +1451,63 @@ std::string Renderer::formatClock(
     return result;
 }
 
+void Renderer::drawOpponentName(
+    const std::string& opponentName,
+    bool opponentIsWhite)
+{
+    SDL_SetRenderDrawColor(
+        renderer,
+        215,
+        215,
+        215,
+        255);
+
+    std::string displayName =
+        opponentName;
+
+    // Panel lateral de solo 80 px:
+    // limitamos visualmente el nombre.
+    constexpr std::size_t maxChars = 11;
+
+    if (
+        displayName.length() >
+        maxChars)
+    {
+        displayName =
+            displayName.substr(
+                0,
+                maxChars);
+    }
+
+    int y;
+
+    if (opponentIsWhite)
+    {
+        // Opponent is White → bottom
+        y = 410;
+    }
+    else
+    {
+        // Opponent is Black → top
+        y = 52;
+    }
+
+    drawSmallText(
+        displayName,
+        5,
+        y,
+        1);
+}
+
+
 void Renderer::render(
     const ChessGame& game,
     const ChessClock& chessClock,
     int cursorRow,
-    int cursorCol)
+    int cursorCol,
+    bool boardFlipped,
+    const std::string& opponentName,
+    bool opponentIsWhite)
 {
     SDL_SetRenderDrawColor(
         renderer,
@@ -1241,6 +1528,10 @@ void Renderer::render(
         game,
         chessClock);
 
+    drawOpponentName(
+        opponentName,
+        opponentIsWhite);
+
     drawCapturedPieces(
         game);
 
@@ -1249,21 +1540,32 @@ void Renderer::render(
         game);
 
     // BOARD
-    drawBoard();
+
+    drawBoard(
+        boardFlipped);
+
+    drawLastMoveHighlight(
+            game,
+            boardFlipped);
 
     drawSelectedSquare(
-        game);
+            game,
+            boardFlipped);
 
     drawLegalMoves(
-        game);
+            game,
+            boardFlipped);
 
     drawCheckIndicator(
-        game);
+            game,
+            boardFlipped);
 
     drawPieces(
-        game);
+            game,
+            boardFlipped);
 
-    drawCoordinates();
+    drawCoordinates(
+        boardFlipped);
 
     if (
         !game.isGameOver() &&
@@ -1271,7 +1573,8 @@ void Renderer::render(
     {
         drawCursor(
             cursorRow,
-            cursorCol);
+            cursorCol,
+            boardFlipped);
     }
 
     drawPromotionMenu(
@@ -2306,7 +2609,7 @@ void Renderer::renderMenu(
             "BACK",
             145,
             325,
-            selected == 2);
+            selected == 3);
     }
 
     SDL_RenderPresent(
@@ -2484,7 +2787,7 @@ void Renderer::drawCapturedPieces(
                 column *
                     spacing,
 
-            62 +
+            78 +
                 row *
                     spacing,
 
@@ -2563,7 +2866,7 @@ void Renderer::drawCapturedPieces(
                 column *
                     spacing,
 
-            350 +
+            334 +
                 row *
                     spacing,
 
