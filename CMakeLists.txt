@@ -7,24 +7,33 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(
     ChessR36S
+
     src/main.cpp
+    src/ChessGame.cpp
+    src/Renderer.cpp
+    src/AudioManager.cpp
 )
 
 target_include_directories(
     ChessR36S
     PRIVATE
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+
     C:/w64devkit/include/SDL2
 )
 
 target_link_directories(
     ChessR36S
     PRIVATE
+
     C:/w64devkit/lib
 )
 
 target_link_libraries(
     ChessR36S
     PRIVATE
+
     mingw32
     SDL2main
     SDL2
