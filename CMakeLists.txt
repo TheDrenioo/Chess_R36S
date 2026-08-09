@@ -12,6 +12,7 @@ add_executable(
     src/ChessGame.cpp
     src/Renderer.cpp
     src/AudioManager.cpp
+    src/StockfishEngine.cpp
 )
 
 target_include_directories(

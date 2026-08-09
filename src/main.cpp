@@ -1,12 +1,106 @@
 #include "AudioManager.h"
 #include "ChessGame.h"
 #include "Renderer.h"
+#include "StockfishEngine.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
 
 #include <algorithm>
 #include <iostream>
+#include <string>
+
+// ============================================================
+// COMPUTER SETTINGS
+// ============================================================
+
+constexpr bool PLAY_VS_COMPUTER = true;
+
+constexpr bool HUMAN_IS_WHITE = true;
+
+constexpr int STOCKFISH_SKILL = 5;
+
+constexpr int STOCKFISH_MOVE_TIME_MS = 300;
+
+// ============================================================
+// ENGINE MOVE
+// ============================================================
+
+void makeComputerMove(
+    ChessGame& game,
+    StockfishEngine& engine,
+    AudioManager& audio)
+{
+    if (!PLAY_VS_COMPUTER)
+    {
+        return;
+    }
+
+    if (!engine.isRunning())
+    {
+        return;
+    }
+
+    if (game.isGameOver())
+    {
+        return;
+    }
+
+    if (game.isPromotionPending())
+    {
+        return;
+    }
+
+    bool computerTurn =
+        HUMAN_IS_WHITE
+            ? !game.isWhiteTurn()
+            : game.isWhiteTurn();
+
+    if (!computerTurn)
+    {
+        return;
+    }
+
+    std::string fen =
+        game.getFEN();
+
+    std::cout
+        << "FEN: "
+        << fen
+        << std::endl;
+
+    std::string bestMove =
+        engine.getBestMove(
+            fen,
+            STOCKFISH_MOVE_TIME_MS);
+
+    if (
+        bestMove.empty() ||
+        bestMove == "(none)")
+    {
+        std::cerr
+            << "Stockfish returned no move."
+            << std::endl;
+
+        return;
+    }
+
+    std::cout
+        << "Stockfish: "
+        << bestMove
+        << std::endl;
+
+    MoveSound sound =
+        game.makeUCIMove(
+            bestMove);
+
+    audio.playMoveSound(
+        sound);
+}
+
+// ============================================================
+// MAIN
+// ============================================================
 
 int main(
     int argc,
@@ -50,7 +144,7 @@ int main(
     }
 
     // ========================================================
-    // SYSTEMS
+    // RENDERER
     // ========================================================
 
     Renderer renderer;
@@ -63,13 +157,55 @@ int main(
         return 1;
     }
 
+    // ========================================================
+    // AUDIO
+    // ========================================================
+
     AudioManager audio;
 
     audio.initialize();
 
+    // ========================================================
+    // GAME
+    // ========================================================
+
     ChessGame game;
 
-    audio.play("start");
+    audio.play(
+        "start");
+
+    // ========================================================
+    // STOCKFISH
+    // ========================================================
+
+    StockfishEngine stockfish;
+
+    bool stockfishAvailable =
+        false;
+
+    if (PLAY_VS_COMPUTER)
+    {
+        stockfishAvailable =
+            stockfish.start(
+                "engine/stockfish.exe");
+
+        if (stockfishAvailable)
+        {
+            stockfish.setSkillLevel(
+                STOCKFISH_SKILL);
+
+            std::cout
+                << "Stockfish skill: "
+                << STOCKFISH_SKILL
+                << std::endl;
+        }
+        else
+        {
+            std::cerr
+                << "Stockfish unavailable."
+                << std::endl;
+        }
+    }
 
     // ========================================================
     // CURSOR
@@ -108,10 +244,13 @@ int main(
     }
 
     // ========================================================
-    // LOOP
+    // MAIN LOOP
     // ========================================================
 
     bool running = true;
+
+    bool computerMovePending =
+        false;
 
     SDL_Event event;
 
@@ -135,7 +274,7 @@ int main(
                 SDL_KEYDOWN)
             {
                 // ---------------------------------------------
-                // PROMOTION MENU
+                // PROMOTION
                 // ---------------------------------------------
 
                 if (game.isPromotionPending())
@@ -147,14 +286,18 @@ int main(
                             game.changePromotionChoice(
                                 -1);
 
-                            audio.play("click");
+                            audio.play(
+                                "click");
+
                             break;
 
                         case SDLK_DOWN:
                             game.changePromotionChoice(
                                 1);
 
-                            audio.play("click");
+                            audio.play(
+                                "click");
+
                             break;
 
                         case SDLK_RETURN:
@@ -165,6 +308,9 @@ int main(
 
                             audio.playMoveSound(
                                 sound);
+
+                            computerMovePending =
+                                true;
 
                             break;
                         }
@@ -196,6 +342,7 @@ int main(
                                     0,
                                     cursorRow - 1);
                         }
+
                         break;
 
                     case SDLK_DOWN:
@@ -206,6 +353,7 @@ int main(
                                     7,
                                     cursorRow + 1);
                         }
+
                         break;
 
                     case SDLK_LEFT:
@@ -216,6 +364,7 @@ int main(
                                     0,
                                     cursorCol - 1);
                         }
+
                         break;
 
                     case SDLK_RIGHT:
@@ -226,11 +375,31 @@ int main(
                                     7,
                                     cursorCol + 1);
                         }
+
                         break;
 
                     case SDLK_RETURN:
                     case SDLK_SPACE:
                     {
+                        // Do not allow player input
+                        // during Stockfish's side.
+
+                        bool humanTurn =
+                            HUMAN_IS_WHITE
+                                ? game.isWhiteTurn()
+                                : !game.isWhiteTurn();
+
+                        if (!humanTurn)
+                        {
+                            audio.playMoveSound(
+                                MoveSound::Illegal);
+
+                            break;
+                        }
+
+                        bool wasWhiteTurn =
+                            game.isWhiteTurn();
+
                         MoveSound sound =
                             game.moveSelectedPiece(
                                 cursorRow,
@@ -240,12 +409,23 @@ int main(
                             sound ==
                             MoveSound::None)
                         {
-                            audio.play("click");
+                            audio.play(
+                                "click");
                         }
                         else
                         {
                             audio.playMoveSound(
                                 sound);
+                        }
+
+                        // Detect if a real move changed turn.
+                        if (
+                            !game.isPromotionPending() &&
+                            wasWhiteTurn !=
+                                game.isWhiteTurn())
+                        {
+                            computerMovePending =
+                                true;
                         }
 
                         break;
@@ -255,14 +435,21 @@ int main(
                         game.cancelSelection();
                         break;
 
-                    // Restart
+                    // -----------------------------------------
+                    // RESTART
+                    // -----------------------------------------
+
                     case SDLK_r:
                         game.newGame();
 
                         cursorRow = 7;
                         cursorCol = 4;
 
-                        audio.play("start");
+                        computerMovePending =
+                            !HUMAN_IS_WHITE;
+
+                        audio.play(
+                            "start");
 
                         break;
                 }
@@ -276,7 +463,10 @@ int main(
                 event.type ==
                 SDL_CONTROLLERBUTTONDOWN)
             {
-                // Promotion menu
+                // ---------------------------------------------
+                // PROMOTION
+                // ---------------------------------------------
+
                 if (game.isPromotionPending())
                 {
                     switch (
@@ -286,14 +476,18 @@ int main(
                             game.changePromotionChoice(
                                 -1);
 
-                            audio.play("click");
+                            audio.play(
+                                "click");
+
                             break;
 
                         case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
                             game.changePromotionChoice(
                                 1);
 
-                            audio.play("click");
+                            audio.play(
+                                "click");
+
                             break;
 
                         case SDL_CONTROLLER_BUTTON_A:
@@ -303,6 +497,9 @@ int main(
 
                             audio.playMoveSound(
                                 sound);
+
+                            computerMovePending =
+                                true;
 
                             break;
                         }
@@ -315,10 +512,15 @@ int main(
                     continue;
                 }
 
+                // ---------------------------------------------
+                // NORMAL INPUT
+                // ---------------------------------------------
+
                 switch (
                     event.cbutton.button)
                 {
                     case SDL_CONTROLLER_BUTTON_DPAD_UP:
+
                         if (!game.isGameOver())
                         {
                             cursorRow =
@@ -326,9 +528,11 @@ int main(
                                     0,
                                     cursorRow - 1);
                         }
+
                         break;
 
                     case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+
                         if (!game.isGameOver())
                         {
                             cursorRow =
@@ -336,9 +540,11 @@ int main(
                                     7,
                                     cursorRow + 1);
                         }
+
                         break;
 
                     case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+
                         if (!game.isGameOver())
                         {
                             cursorCol =
@@ -346,9 +552,11 @@ int main(
                                     0,
                                     cursorCol - 1);
                         }
+
                         break;
 
                     case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+
                         if (!game.isGameOver())
                         {
                             cursorCol =
@@ -356,10 +564,27 @@ int main(
                                     7,
                                     cursorCol + 1);
                         }
+
                         break;
 
                     case SDL_CONTROLLER_BUTTON_A:
                     {
+                        bool humanTurn =
+                            HUMAN_IS_WHITE
+                                ? game.isWhiteTurn()
+                                : !game.isWhiteTurn();
+
+                        if (!humanTurn)
+                        {
+                            audio.playMoveSound(
+                                MoveSound::Illegal);
+
+                            break;
+                        }
+
+                        bool wasWhiteTurn =
+                            game.isWhiteTurn();
+
                         MoveSound sound =
                             game.moveSelectedPiece(
                                 cursorRow,
@@ -369,7 +594,8 @@ int main(
                             sound ==
                             MoveSound::None)
                         {
-                            audio.play("click");
+                            audio.play(
+                                "click");
                         }
                         else
                         {
@@ -377,39 +603,112 @@ int main(
                                 sound);
                         }
 
+                        if (
+                            !game.isPromotionPending() &&
+                            wasWhiteTurn !=
+                                game.isWhiteTurn())
+                        {
+                            computerMovePending =
+                                true;
+                        }
+
                         break;
                     }
 
                     case SDL_CONTROLLER_BUTTON_B:
+
                         game.cancelSelection();
+
                         break;
 
-                    // SELECT = restart
+                    // SELECT
                     case SDL_CONTROLLER_BUTTON_BACK:
+
                         game.newGame();
 
                         cursorRow = 7;
                         cursorCol = 4;
 
-                        audio.play("start");
+                        computerMovePending =
+                            !HUMAN_IS_WHITE;
+
+                        audio.play(
+                            "start");
+
                         break;
 
                     case SDL_CONTROLLER_BUTTON_START:
+
                         running = false;
+
                         break;
                 }
             }
         }
 
+        // =====================================================
+        // RENDER BEFORE ENGINE THINKS
+        // =====================================================
+
         renderer.render(
             game,
             cursorRow,
             cursorCol);
+
+        // =====================================================
+        // STOCKFISH TURN
+        // =====================================================
+
+        if (
+            computerMovePending &&
+            stockfishAvailable &&
+            !game.isGameOver() &&
+            !game.isPromotionPending())
+        {
+            bool computerTurn =
+                HUMAN_IS_WHITE
+                    ? !game.isWhiteTurn()
+                    : game.isWhiteTurn();
+
+            if (computerTurn)
+            {
+                makeComputerMove(
+                    game,
+                    stockfish,
+                    audio);
+            }
+
+            computerMovePending =
+                false;
+        }
+
+        // If computer starts as white later.
+        if (
+            PLAY_VS_COMPUTER &&
+            stockfishAvailable &&
+            !game.isGameOver())
+        {
+            bool computerTurn =
+                HUMAN_IS_WHITE
+                    ? !game.isWhiteTurn()
+                    : game.isWhiteTurn();
+
+            if (
+                computerTurn &&
+                !game.isPromotionPending() &&
+                !computerMovePending)
+            {
+                computerMovePending =
+                    true;
+            }
+        }
     }
 
     // ========================================================
     // CLEANUP
     // ========================================================
+
+    stockfish.stop();
 
     if (controller)
     {

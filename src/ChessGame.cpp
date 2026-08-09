@@ -75,6 +75,8 @@ void ChessGame::newGame()
 
     halfMoveClock = 0;
 
+    fullMoveNumber = 1;
+
     gameOver = false;
     checkMate = false;
     staleMate = false;
@@ -1343,6 +1345,11 @@ MoveSound ChessGame::executeMove(
     whiteTurn =
         !whiteTurn;
 
+    if (!movingWhite)
+    {
+        fullMoveNumber++;
+    }
+
     recordCurrentPosition();
 
     MoveSound stateSound =
@@ -1410,8 +1417,18 @@ MoveSound ChessGame::confirmPromotion()
 
     promotionPending = false;
 
+    bool promotedWhite =
+        board[promotionRow]
+            [promotionCol]
+            .white;
+
     whiteTurn =
         !whiteTurn;
+
+    if (!promotedWhite)
+    {
+        fullMoveNumber++;
+    }
 
     recordCurrentPosition();
 
@@ -1531,6 +1548,126 @@ bool ChessGame::insufficientMaterial() const
     }
 
     return false;
+}
+
+std::string ChessGame::getFEN() const
+{
+    std::ostringstream fen;
+
+    // --------------------------------------------------------
+    // BOARD
+    // --------------------------------------------------------
+
+    for (int row = 0;
+         row < 8;
+         row++)
+    {
+        int emptyCount = 0;
+
+        for (int col = 0;
+             col < 8;
+             col++)
+        {
+            const Piece& piece =
+                board[row][col];
+
+            if (piece.type == ' ')
+            {
+                emptyCount++;
+
+                continue;
+            }
+
+            if (emptyCount > 0)
+            {
+                fen << emptyCount;
+
+                emptyCount = 0;
+            }
+
+            char symbol =
+                piece.type;
+
+            if (piece.white)
+            {
+                symbol =
+                    static_cast<char>(
+                        std::toupper(
+                            static_cast<unsigned char>(
+                                symbol)));
+            }
+
+            fen << symbol;
+        }
+
+        if (emptyCount > 0)
+        {
+            fen << emptyCount;
+        }
+
+        if (row != 7)
+        {
+            fen << '/';
+        }
+    }
+
+    // --------------------------------------------------------
+    // SIDE TO MOVE
+    // --------------------------------------------------------
+
+    fen
+        << ' '
+        << (whiteTurn
+                ? 'w'
+                : 'b');
+
+    // --------------------------------------------------------
+    // CASTLING
+    // --------------------------------------------------------
+
+    fen
+        << ' '
+        << getCastlingRights();
+
+    // --------------------------------------------------------
+    // EN PASSANT
+    // --------------------------------------------------------
+
+    fen << ' ';
+
+    if (
+        enPassantRow >= 0 &&
+        enPassantCol >= 0)
+    {
+        char file =
+            static_cast<char>(
+                'a' +
+                enPassantCol);
+
+        int rank =
+            8 -
+            enPassantRow;
+
+        fen
+            << file
+            << rank;
+    }
+    else
+    {
+        fen << '-';
+    }
+
+    // --------------------------------------------------------
+    // CLOCKS
+    // --------------------------------------------------------
+
+    fen
+        << ' '
+        << halfMoveClock
+        << ' '
+        << fullMoveNumber;
+
+    return fen.str();
 }
 
 // ============================================================
@@ -1737,4 +1874,166 @@ MoveSound ChessGame::evaluateGameState()
     }
 
     return MoveSound::None;
+}
+
+MoveSound ChessGame::makeUCIMove(
+    const std::string& uciMove)
+{
+    if (
+        gameOver ||
+        promotionPending)
+    {
+        return MoveSound::Illegal;
+    }
+
+    if (
+        uciMove.length() < 4)
+    {
+        return MoveSound::Illegal;
+    }
+
+    // --------------------------------------------------------
+    // CONVERT UCI COORDINATES
+    //
+    // e2e4:
+    // from = e2
+    // to   = e4
+    // --------------------------------------------------------
+
+    int fromCol =
+        uciMove[0] - 'a';
+
+    int fromRank =
+        uciMove[1] - '0';
+
+    int toCol =
+        uciMove[2] - 'a';
+
+    int toRank =
+        uciMove[3] - '0';
+
+    int fromRow =
+        8 - fromRank;
+
+    int toRow =
+        8 - toRank;
+
+    if (
+        !insideBoard(
+            fromRow,
+            fromCol) ||
+        !insideBoard(
+            toRow,
+            toCol))
+    {
+        return MoveSound::Illegal;
+    }
+
+    const Piece& piece =
+        board[fromRow][fromCol];
+
+    if (
+        piece.type == ' ' ||
+        piece.white != whiteTurn)
+    {
+        return MoveSound::Illegal;
+    }
+
+    std::vector<Move> moves =
+        calculateLegalMoves(
+            fromRow,
+            fromCol);
+
+    Move selectedMove;
+
+    bool found = false;
+
+    for (const Move& move :
+         moves)
+    {
+        if (
+            move.toRow == toRow &&
+            move.toCol == toCol)
+        {
+            selectedMove = move;
+
+            found = true;
+
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        return MoveSound::Illegal;
+    }
+
+    MoveSound originalSound =
+        executeMove(
+            selectedMove);
+
+    // --------------------------------------------------------
+    // STOCKFISH PROMOTION
+    //
+    // Example:
+    // e7e8q
+    // --------------------------------------------------------
+
+    if (
+        selectedMove.promotion &&
+        promotionPending)
+    {
+        char promotionType = 'q';
+
+        if (
+            uciMove.length() >= 5)
+        {
+            promotionType =
+                static_cast<char>(
+                    std::tolower(
+                        static_cast<unsigned char>(
+                            uciMove[4])));
+        }
+
+        switch (promotionType)
+        {
+            case 'q':
+                promotionChoice = 0;
+                break;
+
+            case 'r':
+                promotionChoice = 1;
+                break;
+
+            case 'b':
+                promotionChoice = 2;
+                break;
+
+            case 'n':
+                promotionChoice = 3;
+                break;
+
+            default:
+                promotionChoice = 0;
+                break;
+        }
+
+        MoveSound promotionSound =
+            confirmPromotion();
+
+        if (
+            promotionSound ==
+                MoveSound::Check ||
+            promotionSound ==
+                MoveSound::Checkmate ||
+            promotionSound ==
+                MoveSound::Draw)
+        {
+            return promotionSound;
+        }
+
+        return MoveSound::Promotion;
+    }
+
+    return originalSound;
 }

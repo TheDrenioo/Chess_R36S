@@ -13,6 +13,11 @@ public:
     ChessGame();
 
     void newGame();
+    
+    std::string getFEN() const;
+
+    MoveSound makeUCIMove(
+        const std::string& uciMove);
 
     const Piece& getPiece(
         int row,
@@ -79,6 +84,8 @@ private:
     int enPassantCol = -1;
 
     int halfMoveClock = 0;
+
+    int fullMoveNumber = 1;
 
     bool gameOver = false;
     bool checkMate = false;
