@@ -90,6 +90,7 @@ void ChessGame::newGame()
     promotionChoice = 0;
 
     positionHistory.clear();
+    moveHistory.clear();
 
     recordCurrentPosition();
 }
@@ -169,6 +170,18 @@ int ChessGame::getSelectedRow() const
 int ChessGame::getSelectedCol() const
 {
     return selectedCol;
+}
+
+const std::vector<std::string>&
+ChessGame::getMoveHistory() const
+{
+    return moveHistory;
+}
+
+int ChessGame::getMoveCount() const
+{
+    return static_cast<int>(
+        moveHistory.size());
 }
 
 // ============================================================
@@ -1214,6 +1227,137 @@ bool ChessGame::findSelectedMove(
     return false;
 }
 
+std::string ChessGame::squareName(
+    int row,
+    int col) const
+{
+    char file =
+        static_cast<char>(
+            'a' + col);
+
+    int rank =
+        8 - row;
+
+    std::string result;
+
+    result += file;
+    result += std::to_string(rank);
+
+    return result;
+}
+
+char ChessGame::pieceLetter(
+    char type) const
+{
+    switch (type)
+    {
+        case 'k':
+            return 'K';
+
+        case 'q':
+            return 'Q';
+
+        case 'r':
+            return 'R';
+
+        case 'b':
+            return 'B';
+
+        case 'n':
+            return 'N';
+
+        default:
+            return '\0';
+    }
+}
+
+std::string ChessGame::moveToSAN(
+    const Move& move,
+    bool wasCapture,
+    bool givesCheck,
+    bool givesMate,
+    char promotionType) const
+{
+    const Piece& piece =
+        board[move.toRow][move.toCol];
+
+    std::string san;
+
+    // Castling
+    if (move.castleKingSide)
+    {
+        san = "O-O";
+    }
+    else if (move.castleQueenSide)
+    {
+        san = "O-O-O";
+    }
+    else
+    {
+        // Pawn
+        if (piece.type == 'p')
+        {
+            if (wasCapture)
+            {
+                char sourceFile =
+                    static_cast<char>(
+                        'a' + move.fromCol);
+
+                san += sourceFile;
+                san += 'x';
+            }
+
+            san +=
+                squareName(
+                    move.toRow,
+                    move.toCol);
+        }
+
+        // Other pieces
+        else
+        {
+            char letter =
+                pieceLetter(
+                    piece.type);
+
+            if (letter != '\0')
+            {
+                san += letter;
+            }
+
+            if (wasCapture)
+            {
+                san += 'x';
+            }
+
+            san +=
+                squareName(
+                    move.toRow,
+                    move.toCol);
+        }
+
+        if (promotionType != ' ')
+        {
+            san += '=';
+
+            san +=
+                pieceLetter(
+                    promotionType);
+        }
+    }
+
+    if (givesMate)
+    {
+        san += '#';
+    }
+    else if (givesCheck)
+    {
+        san += '+';
+    }
+
+    return san;
+}
+
 // ============================================================
 // MOVE EXECUTION
 // ============================================================
@@ -1279,6 +1423,12 @@ MoveSound ChessGame::executeMove(
     Piece movingPiece =
         board[move.fromRow][move.fromCol];
 
+    int originalFromRow =
+        move.fromRow;
+
+    int originalFromCol =
+        move.fromCol;
+
     bool movingWhite =
         movingPiece.white;
 
@@ -1339,6 +1489,14 @@ MoveSound ChessGame::executeMove(
 
         promotionChoice = 0;
 
+        pendingPromotionMove =
+            move;
+
+        pendingPromotionCapture =
+            capture;
+
+        cancelSelection();
+
         return MoveSound::Promotion;
     }
 
@@ -1354,6 +1512,23 @@ MoveSound ChessGame::executeMove(
 
     MoveSound stateSound =
         evaluateGameState();
+
+    bool givesCheck =
+        kingInCheck(
+            whiteTurn);
+
+    bool givesMate =
+        checkMate;
+
+    std::string san =
+        moveToSAN(
+            move,
+            capture,
+            givesCheck,
+            givesMate);
+
+    moveHistory.push_back(
+        san);
 
     if (stateSound != MoveSound::None)
     {
@@ -1409,6 +1584,10 @@ MoveSound ChessGame::confirmPromotion()
         return MoveSound::None;
     }
 
+    char promotedType =
+        promotionPieces[
+            promotionChoice];
+
     board[promotionRow][promotionCol].type =
         promotionPieces[promotionChoice];
 
@@ -1434,6 +1613,24 @@ MoveSound ChessGame::confirmPromotion()
 
     MoveSound stateSound =
         evaluateGameState();
+
+    bool givesCheck =
+        kingInCheck(
+            whiteTurn);
+
+    bool givesMate =
+        checkMate;
+
+    std::string san =
+        moveToSAN(
+            pendingPromotionMove,
+            pendingPromotionCapture,
+            givesCheck,
+            givesMate,
+            promotedType);
+
+    moveHistory.push_back(
+        san);
 
     if (stateSound != MoveSound::None)
     {

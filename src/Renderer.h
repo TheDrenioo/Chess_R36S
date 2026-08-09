@@ -63,6 +63,15 @@ private:
         int y,
         bool selected);
 
+    void drawMoveHistory(
+        const ChessGame& game);
+
+    void drawSmallText(
+        const std::string& text,
+        int x,
+        int y,
+        int scale);
+
     std::map<
         std::string,
         SDL_Texture*>

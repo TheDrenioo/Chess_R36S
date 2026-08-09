@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+
 class ChessGame
 {
 public:
@@ -18,6 +19,11 @@ public:
 
     MoveSound makeUCIMove(
         const std::string& uciMove);
+
+    const std::vector<std::string>&
+    getMoveHistory() const;
+
+    int getMoveCount() const;
 
     const Piece& getPiece(
         int row,
@@ -80,6 +86,13 @@ private:
 
     std::vector<Move> legalMoves;
 
+    std::vector<std::string> moveHistory;
+
+    Move pendingPromotionMove;
+
+    bool pendingPromotionCapture =
+        false;
+
     int enPassantRow = -1;
     int enPassantCol = -1;
 
@@ -98,6 +111,20 @@ private:
     int promotionCol = -1;
 
     int promotionChoice = 0;
+
+    std::string moveToSAN(
+        const Move& move,
+        bool wasCapture,
+        bool givesCheck,
+        bool givesMate,
+        char promotionType = ' ') const;
+
+    std::string squareName(
+        int row,
+        int col) const;
+
+    char pieceLetter(
+        char type) const;
 
     const char promotionPieces[4] = {
         'q',

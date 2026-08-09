@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include <cctype>
+
 // ============================================================
 // CONSTRUCTOR / DESTRUCTOR
 // ============================================================
@@ -386,6 +388,74 @@ void Renderer::drawCircle(
                     centerY + y);
             }
         }
+    }
+}
+
+void Renderer::drawMoveHistory(
+    const ChessGame& game)
+{
+    const auto& history =
+        game.getMoveHistory();
+
+    if (history.empty())
+    {
+        return;
+    }
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        215,
+        215,
+        215,
+        255);
+
+    constexpr int maxVisibleMoves =
+        8;
+
+    int total =
+        static_cast<int>(
+            history.size());
+
+    int start =
+        std::max(
+            0,
+            total -
+                maxVisibleMoves);
+
+    int y = 175;
+
+    for (int i = start;
+         i < total;
+         i++)
+    {
+        std::string text;
+
+        // White move
+        if (i % 2 == 0)
+        {
+            int moveNumber =
+                i / 2 + 1;
+
+            text =
+                std::to_string(
+                    moveNumber);
+
+            text += ".";
+            text += history[i];
+        }
+        else
+        {
+            text =
+                history[i];
+        }
+
+        drawSmallText(
+            text,
+            5,
+            y,
+            1);
+
+        y += 28;
     }
 }
 
@@ -1083,6 +1153,8 @@ void Renderer::render(
 
     drawSidePanel(game);
 
+    drawMoveHistory(game);
+
     drawBoard();
 
     drawSelectedSquare(game);
@@ -1113,6 +1185,34 @@ void Renderer::render(
 // ============================================================
 // SIMPLE MENU FONT
 // ============================================================
+
+void Renderer::drawSmallText(
+    const std::string& text,
+    int x,
+    int y,
+    int scale)
+{
+    int currentX =
+        x;
+
+    for (char character : text)
+    {
+        char upper =
+            static_cast<char>(
+                std::toupper(
+                    static_cast<unsigned char>(
+                        character)));
+
+        drawCharacter(
+            upper,
+            currentX,
+            y,
+            scale);
+
+        currentX +=
+            6 * scale;
+    }
+}
 
 void Renderer::drawCharacter(
     char character,
@@ -1559,6 +1659,85 @@ void Renderer::drawCharacter(
         case ' ':
             break;
 
+        case '0':
+            horizontal(0);
+            horizontal(segmentHeight);
+            verticalLeft(0);
+            verticalLeft(segmentHeight / 2);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '1':
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '2':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalRight(0);
+            verticalLeft(segmentHeight / 2);
+            break;
+
+        case '3':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '4':
+            horizontal(segmentHeight / 2);
+            verticalLeft(0);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '5':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalLeft(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '6':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalLeft(0);
+            verticalLeft(segmentHeight / 2);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '7':
+            horizontal(0);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '8':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalLeft(0);
+            verticalLeft(segmentHeight / 2);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
+        case '9':
+            horizontal(0);
+            horizontal(segmentHeight / 2);
+            horizontal(segmentHeight);
+            verticalLeft(0);
+            verticalRight(0);
+            verticalRight(segmentHeight / 2);
+            break;
+
         case ':':
         {
             SDL_Rect topDot = {
@@ -1613,6 +1792,111 @@ void Renderer::drawCharacter(
                 y +
                     segmentHeight);
             break;
+
+        case '.':
+        {
+            SDL_Rect dot = {
+                x + scale,
+                y + segmentHeight,
+                scale,
+                scale
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &dot);
+
+            break;
+        }
+
+        case '+':
+        {
+            SDL_Rect horizontalBar = {
+                x,
+                y + segmentHeight / 2,
+                segmentWidth,
+                scale
+            };
+
+            SDL_Rect verticalBar = {
+                x + segmentWidth / 2,
+                y + segmentHeight / 4,
+                scale,
+                segmentHeight / 2
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &horizontalBar);
+
+            SDL_RenderFillRect(
+                renderer,
+                &verticalBar);
+
+            break;
+        }
+
+        case '#':
+        {
+            SDL_RenderDrawLine(
+                renderer,
+                x + scale,
+                y,
+                x + scale,
+                y + segmentHeight);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x + 3 * scale,
+                y,
+                x + 3 * scale,
+                y + segmentHeight);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y + 2 * scale,
+                x + segmentWidth,
+                y + 2 * scale);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y + 4 * scale,
+                x + segmentWidth,
+                y + 4 * scale);
+
+            break;
+        }
+
+        case '=':
+        {
+            SDL_Rect top = {
+                x,
+                y + 2 * scale,
+                segmentWidth,
+                scale
+            };
+
+            SDL_Rect bottom = {
+                x,
+                y + 4 * scale,
+                segmentWidth,
+                scale
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &top);
+
+            SDL_RenderFillRect(
+                renderer,
+                &bottom);
+
+            break;
+        }
+
+
 
         default:
             break;
