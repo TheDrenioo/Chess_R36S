@@ -14,6 +14,7 @@ add_executable(
     src/AudioManager.cpp
     src/StockfishEngine.cpp
     src/Menu.cpp
+    src/ChessClock.cpp
 )
 
 target_include_directories(

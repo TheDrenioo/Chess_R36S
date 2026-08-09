@@ -56,6 +56,9 @@ private:
     void changeDifficulty(
         int direction);
 
+    void changeTimeControl(
+        int direction);
+
     void changeColor();
 };
 

@@ -16,6 +16,16 @@ enum class Difficulty
     Master
 };
 
+enum class TimeControl
+{
+    NoClock,
+    Bullet1,
+    Blitz3,
+    Blitz3Plus2,
+    Blitz5,
+    Rapid10
+};
+
 struct GameConfig
 {
     GameMode mode =
@@ -26,6 +36,9 @@ struct GameConfig
 
     Difficulty difficulty =
         Difficulty::Medium;
+
+    TimeControl timeControl =
+        TimeControl::Rapid10;
 
     int getStockfishSkill() const
     {
@@ -71,6 +84,44 @@ struct GameConfig
         }
 
         return 250;
+    }
+
+    int getInitialTimeSeconds() const
+    {
+        switch (timeControl)
+        {
+            case TimeControl::NoClock:
+                return 0;
+
+            case TimeControl::Bullet1:
+                return 60;
+
+            case TimeControl::Blitz3:
+                return 180;
+
+            case TimeControl::Blitz3Plus2:
+                return 180;
+
+            case TimeControl::Blitz5:
+                return 300;
+
+            case TimeControl::Rapid10:
+                return 600;
+        }
+
+        return 600;
+    }
+
+    int getIncrementSeconds() const
+    {
+        if (
+            timeControl ==
+            TimeControl::Blitz3Plus2)
+        {
+            return 2;
+        }
+
+        return 0;
     }
 };
 

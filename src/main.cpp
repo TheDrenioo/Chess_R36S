@@ -4,6 +4,7 @@
 #include "Menu.h"
 #include "Renderer.h"
 #include "StockfishEngine.h"
+#include "ChessClock.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -30,6 +31,7 @@ void makeComputerMove(
     ChessGame& game,
     StockfishEngine& stockfish,
     AudioManager& audio,
+    ChessClock& chessClock,
     const GameConfig& config)
 {
     if (
@@ -90,9 +92,19 @@ void makeComputerMove(
         << bestMove
         << std::endl;
 
+    bool previousTurn =
+        game.isWhiteTurn();
+
     MoveSound sound =
         game.makeUCIMove(
             bestMove);
+
+    if (
+        previousTurn !=
+        game.isWhiteTurn())
+    {
+        chessClock.onMove();
+    }
 
     audio.playMoveSound(
         sound);
@@ -163,9 +175,12 @@ int main(
 
     ChessGame game;
 
-    Menu menu;
+    ChessClock chessClock;
 
+    Menu menu;
+    
     StockfishEngine stockfish;
+
 
     // ========================================================
     // APPLICATION
@@ -224,6 +239,34 @@ int main(
         // ====================================================
         // EVENTS
         // ====================================================
+
+        if (
+            appState ==
+                AppState::Playing &&
+            !game.isGameOver())
+        {
+            chessClock.update();
+
+            if (chessClock.whiteFlagged())
+            {
+                game.declareTimeout(true);
+
+                chessClock.stop();
+
+                audio.play(
+                    "checkmate");
+            }
+            else if (
+                chessClock.blackFlagged())
+            {
+                game.declareTimeout(false);
+
+                chessClock.stop();
+
+                audio.play(
+                    "checkmate");
+            }
+        }
 
         while (SDL_PollEvent(&event))
         {
@@ -295,6 +338,14 @@ int main(
                                     menu.getConfig();
 
                                 game.newGame();
+
+                                chessClock.configure(
+                                    currentConfig
+                                        .getInitialTimeSeconds(),
+                                    currentConfig
+                                        .getIncrementSeconds());
+
+                                chessClock.start(true);
 
                                 cursorRow = 7;
                                 cursorCol = 4;
@@ -410,6 +461,14 @@ int main(
 
                                 game.newGame();
 
+                                chessClock.configure(
+                                    currentConfig
+                                        .getInitialTimeSeconds(),
+                                    currentConfig
+                                        .getIncrementSeconds());
+
+                                chessClock.start(true);
+
                                 cursorRow = 7;
                                 cursorCol = 4;
 
@@ -507,8 +566,18 @@ int main(
                             case SDLK_RETURN:
                             case SDLK_SPACE:
                             {
+                                bool previousTurn =
+                                    game.isWhiteTurn();
+
                                 MoveSound sound =
                                     game.confirmPromotion();
+
+                                if (
+                                    previousTurn !=
+                                    game.isWhiteTurn())
+                                {
+                                    chessClock.onMove();
+                                }
 
                                 audio.playMoveSound(
                                     sound);
@@ -521,6 +590,8 @@ int main(
 
                             case SDLK_ESCAPE:
                                 game.cancelSelection();
+
+                                chessClock.stop();
 
                                 stockfish.stop();
 
@@ -541,6 +612,7 @@ int main(
                         case SDLK_ESCAPE:
 
                             game.cancelSelection();
+                            chessClock.stop();
 
                             stockfish.stop();
 
@@ -646,6 +718,14 @@ int main(
                             }
 
                             if (
+                                !game.isPromotionPending() &&
+                                previousTurn !=
+                                    game.isWhiteTurn())
+                            {
+                                chessClock.onMove();
+                            }
+
+                            if (
                                 currentConfig.mode ==
                                     GameMode::
                                         PlayerVsComputer &&
@@ -669,6 +749,14 @@ int main(
                         case SDLK_r:
 
                             game.newGame();
+
+                            chessClock.configure(
+                                currentConfig
+                                    .getInitialTimeSeconds(),
+                                currentConfig
+                                    .getIncrementSeconds());
+
+                            chessClock.start(true);
 
                             cursorRow = 7;
                             cursorCol = 4;
@@ -722,8 +810,18 @@ int main(
 
                             case SDL_CONTROLLER_BUTTON_A:
                             {
+                                bool previousTurn =
+                                    game.isWhiteTurn();
+
                                 MoveSound sound =
                                     game.confirmPromotion();
+
+                                if (
+                                    previousTurn !=
+                                    game.isWhiteTurn())
+                                {
+                                    chessClock.onMove();
+                                }
 
                                 audio.playMoveSound(
                                     sound);
@@ -735,6 +833,7 @@ int main(
                             }
 
                             case SDL_CONTROLLER_BUTTON_B:
+                                chessClock.stop();
 
                                 stockfish.stop();
 
@@ -846,6 +945,14 @@ int main(
                             }
 
                             if (
+                                !game.isPromotionPending() &&
+                                previousTurn !=
+                                    game.isWhiteTurn())
+                            {
+                                chessClock.onMove();
+                            }
+
+                            if (
                                 currentConfig.mode ==
                                     GameMode::
                                         PlayerVsComputer &&
@@ -870,6 +977,14 @@ int main(
 
                             game.newGame();
 
+                            chessClock.configure(
+                                currentConfig
+                                    .getInitialTimeSeconds(),
+                                currentConfig
+                                    .getIncrementSeconds());
+
+                            chessClock.start(true);
+
                             cursorRow = 7;
                             cursorCol = 4;
 
@@ -887,6 +1002,7 @@ int main(
                             break;
 
                         case SDL_CONTROLLER_BUTTON_START:
+                            chessClock.stop();
 
                             stockfish.stop();
 
@@ -916,6 +1032,7 @@ int main(
         {
             renderer.render(
                 game,
+                chessClock,
                 cursorRow,
                 cursorCol);
 
@@ -943,6 +1060,7 @@ int main(
                         game,
                         stockfish,
                         audio,
+                        chessClock,
                         currentConfig);
                 }
 

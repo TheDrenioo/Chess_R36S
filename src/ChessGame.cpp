@@ -92,6 +92,12 @@ void ChessGame::newGame()
     positionHistory.clear();
     moveHistory.clear();
 
+    capturedByWhite.clear();
+    capturedByBlack.clear();
+
+    timeoutGame = false;
+    whiteLostOnTime = false;
+
     recordCurrentPosition();
 }
 
@@ -182,6 +188,91 @@ int ChessGame::getMoveCount() const
 {
     return static_cast<int>(
         moveHistory.size());
+}
+
+const std::vector<Piece>&
+ChessGame::getCapturedByWhite() const
+{
+    return capturedByWhite;
+}
+
+const std::vector<Piece>&
+ChessGame::getCapturedByBlack() const
+{
+    return capturedByBlack;
+}
+
+int ChessGame::pieceValue(
+    char type) const
+{
+    switch (type)
+    {
+        case 'p':
+            return 1;
+
+        case 'n':
+            return 3;
+
+        case 'b':
+            return 3;
+
+        case 'r':
+            return 5;
+
+        case 'q':
+            return 9;
+
+        default:
+            return 0;
+    }
+}
+
+int ChessGame::getCapturedPointsByWhite() const
+{
+    int total = 0;
+
+    for (
+        const Piece& piece :
+        capturedByWhite)
+    {
+        total +=
+            pieceValue(
+                piece.type);
+    }
+
+    return total;
+}
+
+int ChessGame::getCapturedPointsByBlack() const
+{
+    int total = 0;
+
+    for (
+        const Piece& piece :
+        capturedByBlack)
+    {
+        total +=
+            pieceValue(
+                piece.type);
+    }
+
+    return total;
+}
+
+void ChessGame::declareTimeout(
+    bool whiteLost)
+{
+    if (gameOver)
+    {
+        return;
+    }
+
+    timeoutGame = true;
+
+    whiteLostOnTime =
+        whiteLost;
+
+    gameOver = true;
 }
 
 // ============================================================
@@ -1438,6 +1529,27 @@ MoveSound ChessGame::executeMove(
             move.toCol) ||
         move.enPassant;
 
+    Piece capturedPiece =
+        emptyPiece();
+
+    if (capture)
+    {
+        if (move.enPassant)
+        {
+            capturedPiece =
+                board[
+                    move.fromRow]
+                    [move.toCol];
+        }
+        else
+        {
+            capturedPiece =
+                board[
+                    move.toRow]
+                    [move.toCol];
+        }
+    }
+
     bool pawnMove =
         movingPiece.type == 'p';
 
@@ -1474,6 +1586,22 @@ MoveSound ChessGame::executeMove(
     applyMoveToBoard(
         move,
         false);
+
+    if (
+        capture &&
+        capturedPiece.type != ' ')
+    {
+        if (movingWhite)
+        {
+            capturedByWhite.push_back(
+                capturedPiece);
+        }
+        else
+        {
+            capturedByBlack.push_back(
+                capturedPiece);
+        }
+    }
 
     cancelSelection();
 

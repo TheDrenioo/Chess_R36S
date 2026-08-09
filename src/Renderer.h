@@ -3,6 +3,7 @@
 
 #include "ChessGame.h"
 #include "Menu.h"
+#include "ChessClock.h"
 
 #include <SDL.h>
 
@@ -24,6 +25,14 @@ public:
     static constexpr int BOARD_X = 80;
     static constexpr int BOARD_Y = 0;
 
+    static constexpr int LEFT_PANEL_WIDTH = 80;
+
+    static constexpr int RIGHT_PANEL_X =
+        BOARD_X + BOARD_SIZE;
+
+    static constexpr int RIGHT_PANEL_WIDTH =
+        WINDOW_WIDTH - RIGHT_PANEL_X;
+
     Renderer();
 
     ~Renderer();
@@ -32,6 +41,7 @@ public:
 
     void render(
         const ChessGame& game,
+        const ChessClock& chessClock,
         int cursorRow,
         int cursorCol);
 
@@ -62,6 +72,16 @@ private:
         int x,
         int y,
         bool selected);
+
+    void drawClocks(
+        const ChessGame& game,
+        const ChessClock& chessClock);
+
+    void drawCapturedPieces(
+        const ChessGame& game);
+
+    std::string formatClock(
+        int seconds) const;
 
     void drawMoveHistory(
         const ChessGame& game);
@@ -107,7 +127,7 @@ private:
 
     void drawCoordinates();
 
-    void drawSidePanel(
+    void drawPanels(
         const ChessGame& game);
 
     void drawPromotionMenu(

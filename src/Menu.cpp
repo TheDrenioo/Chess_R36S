@@ -32,7 +32,7 @@ void Menu::moveUp()
 
         if (selectedOption < 0)
         {
-            selectedOption = 2;
+            selectedOption = 3;
         }
     }
 }
@@ -54,7 +54,7 @@ void Menu::moveDown()
     {
         selectedOption++;
 
-        if (selectedOption > 2)
+        if (selectedOption > 3)
         {
             selectedOption = 0;
         }
@@ -79,6 +79,9 @@ void Menu::moveLeft()
         case 1:
             changeDifficulty(-1);
             break;
+        case 2:
+            changeTimeControl(-1);
+            break;
     }
 }
 
@@ -99,6 +102,9 @@ void Menu::moveRight()
 
         case 1:
             changeDifficulty(1);
+            break;
+        case 2:
+            changeTimeControl(1);
             break;
     }
 }
@@ -155,6 +161,10 @@ MenuAction Menu::select()
                 break;
 
             case 2:
+                changeTimeControl(1);
+                break;
+
+            case 3:
                 screen =
                     MenuScreen::Main;
 
@@ -228,5 +238,34 @@ void Menu::changeDifficulty(
 
     config.difficulty =
         static_cast<Difficulty>(
+            value);
+}
+
+void Menu::changeTimeControl(
+    int direction)
+{
+    int value =
+        static_cast<int>(
+            config.timeControl);
+
+    value += direction;
+
+    constexpr int totalOptions = 6;
+
+    if (value < 0)
+    {
+        value =
+            totalOptions - 1;
+    }
+
+    if (
+        value >=
+        totalOptions)
+    {
+        value = 0;
+    }
+
+    config.timeControl =
+        static_cast<TimeControl>(
             value);
 }

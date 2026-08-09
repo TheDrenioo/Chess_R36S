@@ -397,20 +397,51 @@ void Renderer::drawMoveHistory(
     const auto& history =
         game.getMoveHistory();
 
+    // ========================================================
+    // TITLE
+    // ========================================================
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        190,
+        190,
+        190,
+        255);
+
+    drawSmallText(
+        "MOVES",
+        RIGHT_PANEL_X + 8,
+        12,
+        1);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        75,
+        75,
+        75,
+        255);
+
+    SDL_Rect separator = {
+        RIGHT_PANEL_X + 5,
+        28,
+        RIGHT_PANEL_WIDTH - 10,
+        1
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &separator);
+
     if (history.empty())
     {
         return;
     }
 
-    SDL_SetRenderDrawColor(
-        renderer,
-        215,
-        215,
-        215,
-        255);
+    // ========================================================
+    // MOVE HISTORY
+    // ========================================================
 
-    constexpr int maxVisibleMoves =
-        8;
+    constexpr int maxVisibleHalfMoves = 16;
 
     int total =
         static_cast<int>(
@@ -420,42 +451,91 @@ void Renderer::drawMoveHistory(
         std::max(
             0,
             total -
-                maxVisibleMoves);
+                maxVisibleHalfMoves);
 
-    int y = 175;
+    // Keep the beginning on a white move.
+    if (start % 2 != 0)
+    {
+        start--;
+    }
+
+    int y = 42;
 
     for (int i = start;
          i < total;
-         i++)
+         i += 2)
     {
-        std::string text;
+        int moveNumber =
+            i / 2 + 1;
 
-        // White move
-        if (i % 2 == 0)
-        {
-            int moveNumber =
-                i / 2 + 1;
+        // ----------------------------------------------------
+        // MOVE NUMBER
+        // ----------------------------------------------------
 
-            text =
-                std::to_string(
-                    moveNumber);
+        SDL_SetRenderDrawColor(
+            renderer,
+            130,
+            130,
+            130,
+            255);
 
-            text += ".";
-            text += history[i];
-        }
-        else
-        {
-            text =
-                history[i];
-        }
+        std::string numberText =
+            std::to_string(
+                moveNumber);
+
+        numberText += ".";
 
         drawSmallText(
-            text,
-            5,
+            numberText,
+            RIGHT_PANEL_X + 4,
             y,
             1);
 
-        y += 28;
+        // ----------------------------------------------------
+        // WHITE MOVE
+        // ----------------------------------------------------
+
+        SDL_SetRenderDrawColor(
+            renderer,
+            225,
+            225,
+            225,
+            255);
+
+        drawSmallText(
+            history[i],
+            RIGHT_PANEL_X + 25,
+            y,
+            1);
+
+        // ----------------------------------------------------
+        // BLACK MOVE
+        // ----------------------------------------------------
+
+        if (i + 1 < total)
+        {
+            SDL_SetRenderDrawColor(
+                renderer,
+                175,
+                175,
+                175,
+                255);
+
+            drawSmallText(
+                history[i + 1],
+                RIGHT_PANEL_X + 25,
+                y + 18,
+                1);
+        }
+
+        y += 42;
+
+        if (
+            y >
+            WINDOW_HEIGHT - 30)
+        {
+            break;
+        }
     }
 }
 
@@ -682,9 +762,13 @@ void Renderer::drawCheckIndicator(
 // SIDE PANEL
 // ============================================================
 
-void Renderer::drawSidePanel(
+void Renderer::drawPanels(
     const ChessGame& game)
 {
+    // ========================================================
+    // LEFT PANEL
+    // ========================================================
+
     SDL_SetRenderDrawColor(
         renderer,
         28,
@@ -692,80 +776,42 @@ void Renderer::drawSidePanel(
         28,
         255);
 
-    SDL_Rect panel = {
+    SDL_Rect leftPanel = {
         0,
         0,
-        BOARD_X,
+        LEFT_PANEL_WIDTH,
         WINDOW_HEIGHT
     };
 
     SDL_RenderFillRect(
         renderer,
-        &panel);
+        &leftPanel);
 
-    if (game.isWhiteTurn())
-    {
-        SDL_SetRenderDrawColor(
-            renderer,
-            230,
-            230,
-            230,
-            255);
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(
-            renderer,
-            55,
-            55,
-            55,
-            255);
-    }
+    // ========================================================
+    // RIGHT PANEL
+    // ========================================================
 
-    SDL_Rect turnBox = {
-        18,
-        18,
-        44,
-        44
+    SDL_SetRenderDrawColor(
+        renderer,
+        28,
+        28,
+        28,
+        255);
+
+    SDL_Rect rightPanel = {
+        RIGHT_PANEL_X,
+        0,
+        RIGHT_PANEL_WIDTH,
+        WINDOW_HEIGHT
     };
 
     SDL_RenderFillRect(
         renderer,
-        &turnBox);
+        &rightPanel);
 
-    SDL_SetRenderDrawColor(
-        renderer,
-        130,
-        130,
-        130,
-        255);
-
-    SDL_RenderDrawRect(
-        renderer,
-        &turnBox);
-
-    if (
-        game.kingInCheck(
-            game.isWhiteTurn()))
-    {
-        SDL_SetRenderDrawColor(
-            renderer,
-            210,
-            45,
-            45,
-            255);
-
-        SDL_Rect checkBox = {
-            18,
-            76,
-            44,
-            12
-        };
-
-        SDL_RenderFillRect(
-            renderer,
-            &checkBox);
-    }
+    // ========================================================
+    // GAME OVER INDICATOR
+    // ========================================================
 
     if (game.isGameOver())
     {
@@ -790,9 +836,9 @@ void Renderer::drawSidePanel(
 
         SDL_Rect resultBox = {
             18,
-            105,
+            205,
             44,
-            44
+            20
         };
 
         SDL_RenderFillRect(
@@ -1136,8 +1182,43 @@ void Renderer::drawPromotionMenu(
 // COMPLETE FRAME
 // ============================================================
 
+std::string Renderer::formatClock(
+    int seconds) const
+{
+    int minutes =
+        seconds / 60;
+
+    int remainingSeconds =
+        seconds % 60;
+
+    std::string result;
+
+    if (minutes < 10)
+    {
+        result += '0';
+    }
+
+    result +=
+        std::to_string(
+            minutes);
+
+    result += ':';
+
+    if (remainingSeconds < 10)
+    {
+        result += '0';
+    }
+
+    result +=
+        std::to_string(
+            remainingSeconds);
+
+    return result;
+}
+
 void Renderer::render(
     const ChessGame& game,
+    const ChessClock& chessClock,
     int cursorRow,
     int cursorCol)
 {
@@ -1151,19 +1232,36 @@ void Renderer::render(
     SDL_RenderClear(
         renderer);
 
-    drawSidePanel(game);
+    // Left + right background panels
+    drawPanels(
+        game);
 
-    drawMoveHistory(game);
+    // LEFT PANEL
+    drawClocks(
+        game,
+        chessClock);
 
+    drawCapturedPieces(
+        game);
+
+    // RIGHT PANEL
+    drawMoveHistory(
+        game);
+
+    // BOARD
     drawBoard();
 
-    drawSelectedSquare(game);
+    drawSelectedSquare(
+        game);
 
-    drawLegalMoves(game);
+    drawLegalMoves(
+        game);
 
-    drawCheckIndicator(game);
+    drawCheckIndicator(
+        game);
 
-    drawPieces(game);
+    drawPieces(
+        game);
 
     drawCoordinates();
 
@@ -1176,7 +1274,8 @@ void Renderer::render(
             cursorCol);
     }
 
-    drawPromotionMenu(game);
+    drawPromotionMenu(
+        game);
 
     SDL_RenderPresent(
         renderer);
@@ -1581,6 +1680,56 @@ void Renderer::drawCharacter(
 
                 x +
                     segmentWidth / 2,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'K':
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y +
+                    segmentHeight / 2,
+                x +
+                    segmentWidth,
+                y);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x,
+                y +
+                    segmentHeight / 2,
+                x +
+                    segmentWidth,
+                y +
+                    segmentHeight);
+            break;
+
+        case 'Q':
+            horizontal(0);
+            horizontal(
+                segmentHeight);
+
+            verticalLeft(0);
+            verticalLeft(
+                segmentHeight / 2);
+
+            verticalRight(0);
+            verticalRight(
+                segmentHeight / 2);
+
+            SDL_RenderDrawLine(
+                renderer,
+                x +
+                    segmentWidth / 2,
+                y +
+                    segmentHeight / 2,
+                x +
+                    segmentWidth,
                 y +
                     segmentHeight);
             break;
@@ -2077,6 +2226,36 @@ void Renderer::renderMenu(
         std::string difficultyText =
             "DIFFICULTY: ";
 
+        std::string timeText =
+            "TIME: ";
+
+        switch (config.timeControl)
+        {
+            case TimeControl::NoClock:
+                timeText += "NONE";
+                break;
+
+            case TimeControl::Bullet1:
+                timeText += "1 MIN";
+                break;
+
+            case TimeControl::Blitz3:
+                timeText += "3 MIN";
+                break;
+
+            case TimeControl::Blitz3Plus2:
+                timeText += "3+2";
+                break;
+
+            case TimeControl::Blitz5:
+                timeText += "5 MIN";
+                break;
+
+            case TimeControl::Rapid10:
+                timeText += "10 MIN";
+                break;
+        }
+
         switch (config.difficulty)
         {
             case Difficulty::Easy:
@@ -2108,22 +2287,318 @@ void Renderer::renderMenu(
         drawMenuItem(
             colorText,
             145,
-            180,
+            160,
             selected == 0);
 
         drawMenuItem(
             difficultyText,
             145,
-            245,
+            215,
             selected == 1);
+
+        drawMenuItem(
+            timeText,
+            145,
+            270,
+            selected == 2);
 
         drawMenuItem(
             "BACK",
             145,
-            310,
+            325,
             selected == 2);
     }
 
     SDL_RenderPresent(
         renderer);
+}
+
+void Renderer::drawClocks(
+    const ChessGame& game,
+    const ChessClock& chessClock)
+{
+    (void)game;
+
+    if (!chessClock.isEnabled())
+    {
+        return;
+    }
+
+    // ========================================================
+    // BLACK
+    // ========================================================
+
+    bool blackActive =
+        !chessClock.isWhiteActive();
+
+    if (blackActive)
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            118,
+            150,
+            86,
+            255);
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            60,
+            60,
+            60,
+            255);
+    }
+
+    SDL_Rect blackClock = {
+        5,
+        8,
+        70,
+        42
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &blackClock);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        240,
+        240,
+        240,
+        255);
+
+    drawSmallText(
+        formatClock(
+            chessClock.getBlackSeconds()),
+        12,
+        21,
+        2);
+
+    // ========================================================
+    // WHITE
+    // ========================================================
+
+    bool whiteActive =
+        chessClock.isWhiteActive();
+
+    if (whiteActive)
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            118,
+            150,
+            86,
+            255);
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            60,
+            60,
+            60,
+            255);
+    }
+
+    SDL_Rect whiteClock = {
+        5,
+        430,
+        70,
+        42
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &whiteClock);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        240,
+        240,
+        240,
+        255);
+
+    drawSmallText(
+        formatClock(
+            chessClock.getWhiteSeconds()),
+        12,
+        443,
+        2);
+}
+
+void Renderer::drawCapturedPieces(
+    const ChessGame& game)
+{
+    constexpr int iconSize = 14;
+    constexpr int spacing = 16;
+
+    // Material advantage
+    int whiteScore =
+        game.getCapturedPointsByWhite();
+
+    int blackScore =
+        game.getCapturedPointsByBlack();
+
+    int difference =
+        whiteScore -
+        blackScore;
+
+    // ========================================================
+    // BLACK CAPTURES
+    // White pieces captured by Black
+    // ========================================================
+
+    const auto& blackCaptures =
+        game.getCapturedByBlack();
+
+    int index = 0;
+
+    for (
+        const Piece& piece :
+        blackCaptures)
+    {
+        std::string key =
+            getPieceKey(
+                piece);
+
+        auto it =
+            textures.find(key);
+
+        if (
+            it ==
+                textures.end() ||
+            !it->second)
+        {
+            continue;
+        }
+
+        int column =
+            index % 4;
+
+        int row =
+            index / 4;
+
+        SDL_Rect destination = {
+            7 +
+                column *
+                    spacing,
+
+            62 +
+                row *
+                    spacing,
+
+            iconSize,
+            iconSize
+        };
+
+        SDL_RenderCopy(
+            renderer,
+            it->second,
+            nullptr,
+            &destination);
+
+        index++;
+    }
+
+    // Black advantage
+    if (difference < 0)
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            220,
+            220,
+            220,
+            255);
+
+        std::string points =
+            "+" +
+            std::to_string(
+                -difference);
+
+        drawSmallText(
+            points,
+            8,
+            128,
+            1);
+    }
+
+    // ========================================================
+    // WHITE CAPTURES
+    // Black pieces captured by White
+    // ========================================================
+
+    const auto& whiteCaptures =
+        game.getCapturedByWhite();
+
+    index = 0;
+
+    for (
+        const Piece& piece :
+        whiteCaptures)
+    {
+        std::string key =
+            getPieceKey(
+                piece);
+
+        auto it =
+            textures.find(key);
+
+        if (
+            it ==
+                textures.end() ||
+            !it->second)
+        {
+            continue;
+        }
+
+        int column =
+            index % 4;
+
+        int row =
+            index / 4;
+
+        SDL_Rect destination = {
+            7 +
+                column *
+                    spacing,
+
+            350 +
+                row *
+                    spacing,
+
+            iconSize,
+            iconSize
+        };
+
+        SDL_RenderCopy(
+            renderer,
+            it->second,
+            nullptr,
+            &destination);
+
+        index++;
+    }
+
+    // White advantage
+    if (difference > 0)
+    {
+        SDL_SetRenderDrawColor(
+            renderer,
+            220,
+            220,
+            220,
+            255);
+
+        std::string points =
+            "+" +
+            std::to_string(
+                difference);
+
+        drawSmallText(
+            points,
+            8,
+            414,
+            1);
+    }
 }

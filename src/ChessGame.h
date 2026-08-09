@@ -50,6 +50,19 @@ public:
     const std::vector<Move>&
     getLegalMoves() const;
 
+    const std::vector<Piece>&
+    getCapturedByWhite() const;
+
+    const std::vector<Piece>&
+    getCapturedByBlack() const;
+
+    int getCapturedPointsByWhite() const;
+
+    int getCapturedPointsByBlack() const;
+
+    void declareTimeout(
+        bool whiteLost);
+
     bool hasSelectedPiece() const;
 
     int getSelectedRow() const;
@@ -87,6 +100,19 @@ private:
     std::vector<Move> legalMoves;
 
     std::vector<std::string> moveHistory;
+
+    std::vector<Piece>
+    capturedByWhite;
+
+    std::vector<Piece>
+        capturedByBlack;
+
+    bool timeoutGame = false;
+
+    bool whiteLostOnTime = false;
+
+    int pieceValue(
+        char type) const;
 
     Move pendingPromotionMove;
 
