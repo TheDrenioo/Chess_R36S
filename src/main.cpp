@@ -1258,11 +1258,23 @@ int main(
             // OPPONENT INFORMATION
             // =================================================
 
+            // =================================================
+            // LOCAL PLAYER NAME
+            // =================================================
+
+            std::string playerName =
+                "PLAYER";
+
+            if (
+                lichess.isConnected() &&
+                !lichess.getUsername().empty())
+            {
+                playerName =
+                    lichess.getUsername();
+            }
+
             std::string opponentName =
                 currentConfig.opponentName;
-
-            bool opponentIsWhite =
-                false;
 
             // -------------------------------------------------
             // VS STOCKFISH
@@ -1274,9 +1286,6 @@ int main(
             {
                 opponentName =
                     "STOCKFISH";
-
-                opponentIsWhite =
-                    !currentConfig.humanIsWhite;
             }
 
             // -------------------------------------------------
@@ -1289,9 +1298,6 @@ int main(
             {
                 opponentName =
                     "PLAYER 2";
-
-                opponentIsWhite =
-                    false;
             }
 
             // -------------------------------------------------
@@ -1312,9 +1318,6 @@ int main(
                     // Opponent is Black.
                     opponentName =
                         onlineGame.blackUsername;
-
-                    opponentIsWhite =
-                        false;
                 }
                 else
                 {
@@ -1322,9 +1325,6 @@ int main(
                     // Opponent is White.
                     opponentName =
                         onlineGame.whiteUsername;
-
-                    opponentIsWhite =
-                        true;
                 }
             }
 
@@ -1338,8 +1338,8 @@ int main(
                 cursorRow,
                 cursorCol,
                 boardFlipped,
-                opponentName,
-                opponentIsWhite);
+                playerName,
+                opponentName);
 
             // =================================================
             // STOCKFISH

@@ -1451,10 +1451,39 @@ std::string Renderer::formatClock(
     return result;
 }
 
-void Renderer::drawOpponentName(
-    const std::string& opponentName,
-    bool opponentIsWhite)
+void Renderer::drawPlayerNames(
+    const std::string& playerName,
+    const std::string& opponentName)
 {
+    constexpr std::size_t maxChars =
+        11;
+
+    std::string topName =
+        opponentName;
+
+    std::string bottomName =
+        playerName;
+
+    if (
+        topName.length() >
+        maxChars)
+    {
+        topName =
+            topName.substr(
+                0,
+                maxChars);
+    }
+
+    if (
+        bottomName.length() >
+        maxChars)
+    {
+        bottomName =
+            bottomName.substr(
+                0,
+                maxChars);
+    }
+
     SDL_SetRenderDrawColor(
         renderer,
         215,
@@ -1462,40 +1491,24 @@ void Renderer::drawOpponentName(
         215,
         255);
 
-    std::string displayName =
-        opponentName;
-
-    // Panel lateral de solo 80 px:
-    // limitamos visualmente el nombre.
-    constexpr std::size_t maxChars = 11;
-
-    if (
-        displayName.length() >
-        maxChars)
-    {
-        displayName =
-            displayName.substr(
-                0,
-                maxChars);
-    }
-
-    int y;
-
-    if (opponentIsWhite)
-    {
-        // Opponent is White → bottom
-        y = 410;
-    }
-    else
-    {
-        // Opponent is Black → top
-        y = 52;
-    }
+    // ========================================================
+    // OPPONENT
+    // ========================================================
 
     drawSmallText(
-        displayName,
+        topName,
         5,
-        y,
+        57,
+        1);
+
+    // ========================================================
+    // LOCAL PLAYER
+    // ========================================================
+
+    drawSmallText(
+        bottomName,
+        5,
+        419,
         1);
 }
 
@@ -1506,8 +1519,8 @@ void Renderer::render(
     int cursorRow,
     int cursorCol,
     bool boardFlipped,
-    const std::string& opponentName,
-    bool opponentIsWhite)
+    const std::string& playerName,
+    const std::string& opponentName)
 {
     SDL_SetRenderDrawColor(
         renderer,
@@ -1525,15 +1538,16 @@ void Renderer::render(
 
     // LEFT PANEL
     drawClocks(
-        game,
-        chessClock);
+        chessClock,
+        boardFlipped);
 
-    drawOpponentName(
-        opponentName,
-        opponentIsWhite);
+    drawPlayerNames(
+        playerName,
+        opponentName);
 
     drawCapturedPieces(
-        game);
+        game,
+        boardFlipped);
 
     // RIGHT PANEL
     drawMoveHistory(
@@ -2883,24 +2897,55 @@ void Renderer::renderMenu(
 }
 
 void Renderer::drawClocks(
-    const ChessGame& game,
-    const ChessClock& chessClock)
+    const ChessClock& chessClock,
+    bool boardFlipped)
 {
-    (void)game;
-
     if (!chessClock.isEnabled())
     {
         return;
     }
 
     // ========================================================
-    // BLACK
+    // BOARD ORIENTATION
+    //
+    // Normal:
+    //   Top    = Black
+    //   Bottom = White
+    //
+    // Flipped:
+    //   Top    = White
+    //   Bottom = Black
     // ========================================================
 
-    bool blackActive =
-        !chessClock.isWhiteActive();
+    bool topIsWhite =
+        boardFlipped;
 
-    if (blackActive)
+    bool bottomIsWhite =
+        !boardFlipped;
+
+    int topSeconds =
+        topIsWhite
+            ? chessClock.getWhiteSeconds()
+            : chessClock.getBlackSeconds();
+
+    int bottomSeconds =
+        bottomIsWhite
+            ? chessClock.getWhiteSeconds()
+            : chessClock.getBlackSeconds();
+
+    bool topActive =
+        chessClock.isWhiteActive() ==
+        topIsWhite;
+
+    bool bottomActive =
+        chessClock.isWhiteActive() ==
+        bottomIsWhite;
+
+    // ========================================================
+    // TOP CLOCK - OPPONENT
+    // ========================================================
+
+    if (topActive)
     {
         SDL_SetRenderDrawColor(
             renderer,
@@ -2919,16 +2964,16 @@ void Renderer::drawClocks(
             255);
     }
 
-    SDL_Rect blackClock = {
+    SDL_Rect topClock = {
         5,
         8,
         70,
-        42
+        36
     };
 
     SDL_RenderFillRect(
         renderer,
-        &blackClock);
+        &topClock);
 
     SDL_SetRenderDrawColor(
         renderer,
@@ -2938,20 +2983,16 @@ void Renderer::drawClocks(
         255);
 
     drawSmallText(
-        formatClock(
-            chessClock.getBlackSeconds()),
+        formatClock(topSeconds),
         12,
-        21,
+        20,
         2);
 
     // ========================================================
-    // WHITE
+    // BOTTOM CLOCK - LOCAL PLAYER
     // ========================================================
 
-    bool whiteActive =
-        chessClock.isWhiteActive();
-
-    if (whiteActive)
+    if (bottomActive)
     {
         SDL_SetRenderDrawColor(
             renderer,
@@ -2970,16 +3011,16 @@ void Renderer::drawClocks(
             255);
     }
 
-    SDL_Rect whiteClock = {
+    SDL_Rect bottomClock = {
         5,
-        430,
+        440,
         70,
-        42
+        34
     };
 
     SDL_RenderFillRect(
         renderer,
-        &whiteClock);
+        &bottomClock);
 
     SDL_SetRenderDrawColor(
         renderer,
@@ -2989,20 +3030,23 @@ void Renderer::drawClocks(
         255);
 
     drawSmallText(
-        formatClock(
-            chessClock.getWhiteSeconds()),
+        formatClock(bottomSeconds),
         12,
-        443,
+        451,
         2);
 }
 
 void Renderer::drawCapturedPieces(
-    const ChessGame& game)
+    const ChessGame& game,
+    bool boardFlipped)
 {
     constexpr int iconSize = 14;
     constexpr int spacing = 16;
 
-    // Material advantage
+    // ========================================================
+    // MATERIAL
+    // ========================================================
+
     int whiteScore =
         game.getCapturedPointsByWhite();
 
@@ -3014,29 +3058,52 @@ void Renderer::drawCapturedPieces(
         blackScore;
 
     // ========================================================
-    // BLACK CAPTURES
-    // White pieces captured by Black
+    // DETERMINE WHICH COLOR IS TOP / BOTTOM
     // ========================================================
 
-    const auto& blackCaptures =
-        game.getCapturedByBlack();
+    bool topIsWhite =
+        boardFlipped;
+
+    bool bottomIsWhite =
+        !boardFlipped;
+
+    // ========================================================
+    // CAPTURE LISTS
+    //
+    // getCapturedByWhite()
+    // = black pieces captured by White
+    //
+    // getCapturedByBlack()
+    // = white pieces captured by Black
+    // ========================================================
+
+    const std::vector<Piece>& topCaptures =
+        topIsWhite
+            ? game.getCapturedByWhite()
+            : game.getCapturedByBlack();
+
+    const std::vector<Piece>& bottomCaptures =
+        bottomIsWhite
+            ? game.getCapturedByWhite()
+            : game.getCapturedByBlack();
+
+    // ========================================================
+    // TOP PLAYER CAPTURES
+    // ========================================================
 
     int index = 0;
 
-    for (
-        const Piece& piece :
-        blackCaptures)
+    for (const Piece& piece :
+         topCaptures)
     {
         std::string key =
-            getPieceKey(
-                piece);
+            getPieceKey(piece);
 
         auto it =
             textures.find(key);
 
         if (
-            it ==
-                textures.end() ||
+            it == textures.end() ||
             !it->second)
         {
             continue;
@@ -3053,7 +3120,7 @@ void Renderer::drawCapturedPieces(
                 column *
                     spacing,
 
-            78 +
+            82 +
                 row *
                     spacing,
 
@@ -3070,52 +3137,23 @@ void Renderer::drawCapturedPieces(
         index++;
     }
 
-    // Black advantage
-    if (difference < 0)
-    {
-        SDL_SetRenderDrawColor(
-            renderer,
-            220,
-            220,
-            220,
-            255);
-
-        std::string points =
-            "+" +
-            std::to_string(
-                -difference);
-
-        drawSmallText(
-            points,
-            8,
-            128,
-            1);
-    }
-
     // ========================================================
-    // WHITE CAPTURES
-    // Black pieces captured by White
+    // BOTTOM PLAYER CAPTURES
     // ========================================================
-
-    const auto& whiteCaptures =
-        game.getCapturedByWhite();
 
     index = 0;
 
-    for (
-        const Piece& piece :
-        whiteCaptures)
+    for (const Piece& piece :
+         bottomCaptures)
     {
         std::string key =
-            getPieceKey(
-                piece);
+            getPieceKey(piece);
 
         auto it =
             textures.find(key);
 
         if (
-            it ==
-                textures.end() ||
+            it == textures.end() ||
             !it->second)
         {
             continue;
@@ -3149,25 +3187,81 @@ void Renderer::drawCapturedPieces(
         index++;
     }
 
-    // White advantage
+    // ========================================================
+    // MATERIAL ADVANTAGE
+    // ========================================================
+
+    int topAdvantage = 0;
+    int bottomAdvantage = 0;
+
     if (difference > 0)
     {
-        SDL_SetRenderDrawColor(
-            renderer,
-            220,
-            220,
-            220,
-            255);
+        // White has advantage.
 
+        if (topIsWhite)
+        {
+            topAdvantage =
+                difference;
+        }
+        else
+        {
+            bottomAdvantage =
+                difference;
+        }
+    }
+    else if (difference < 0)
+    {
+        // Black has advantage.
+
+        int blackAdvantage =
+            -difference;
+
+        if (!topIsWhite)
+        {
+            topAdvantage =
+                blackAdvantage;
+        }
+        else
+        {
+            bottomAdvantage =
+                blackAdvantage;
+        }
+    }
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        220,
+        220,
+        220,
+        255);
+
+    // Top advantage
+    if (topAdvantage > 0)
+    {
         std::string points =
             "+" +
             std::to_string(
-                difference);
+                topAdvantage);
 
         drawSmallText(
             points,
             8,
-            414,
+            151,
+            1);
+    }
+
+    // Bottom advantage
+    if (bottomAdvantage > 0)
+    {
+        std::string points =
+            "+" +
+            std::to_string(
+                bottomAdvantage);
+
+        drawSmallText(
+            points,
+            8,
+            402,
             1);
     }
 }

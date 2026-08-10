@@ -47,8 +47,8 @@ public:
         int cursorRow,
         int cursorCol,
         bool boardFlipped,
-        const std::string& opponentName,
-        bool opponentIsWhite);
+        const std::string& playerName,
+        const std::string& opponentName);
 
     SDL_Renderer*
     getSDLRenderer();
@@ -68,9 +68,9 @@ private:
         int logicalCol,
         bool flipped) const;
 
-    void drawOpponentName(
-        const std::string& opponentName,
-        bool opponentIsWhite);
+    void drawPlayerNames(
+        const std::string& playerName,
+        const std::string& opponentName);
 
     void drawMenuText(
         const std::string& text,
@@ -91,11 +91,12 @@ private:
         bool selected);
 
     void drawClocks(
-        const ChessGame& game,
-        const ChessClock& chessClock);
+        const ChessClock& chessClock,
+        bool boardFlipped);
 
     void drawCapturedPieces(
-        const ChessGame& game);
+        const ChessGame& game,
+        bool boardFlipped);
 
     std::string formatClock(
         int seconds) const;
