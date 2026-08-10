@@ -2874,6 +2874,111 @@ void Renderer::renderMenu(
                 3);
         }
 
+        if (lichess.hasIncomingChallenge())
+        {
+            LichessChallenge challenge =
+                lichess.getIncomingChallenge();
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                255,
+                215,
+                0,
+                255);
+
+            drawMenuText(
+                "CHALLENGE FROM",
+                170,
+                345,
+                2);
+
+            std::string challenger =
+                challenge
+                    .challengerUsername;
+
+            if (
+                challenger.length() > 16)
+            {
+                challenger =
+                    challenger.substr(
+                        0,
+                        16);
+            }
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                238,
+                238,
+                210,
+                255);
+
+            drawMenuText(
+                challenger,
+                190,
+                375,
+                2);
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                118,
+                150,
+                86,
+                255);
+
+            drawMenuText(
+                "A ACCEPT",
+                175,
+                420,
+                2);
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                190,
+                70,
+                70,
+                255);
+
+            drawMenuText(
+                "B DECLINE",
+                330,
+                420,
+                2);
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(
+                renderer,
+                150,
+                150,
+                150,
+                255);
+
+            drawMenuText(
+                "WAITING FOR",
+                205,
+                355,
+                2);
+
+            drawMenuText(
+                "CHALLENGE",
+                225,
+                385,
+                2);
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                118,
+                150,
+                86,
+                255);
+
+            drawMenuText(
+                "B BACK",
+                245,
+                430,
+                2);
+        }
+
         // ========================================================
         // BACK
         // ========================================================

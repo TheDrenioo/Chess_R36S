@@ -4,6 +4,9 @@
 #include <curl/curl.h>
 
 #include <string>
+#include <atomic>
+#include <mutex>
+#include <thread>
 
 enum class LichessConnectionState
 {
@@ -12,6 +15,19 @@ enum class LichessConnectionState
     Connected,
     InGame,
     Error
+};
+
+struct LichessChallenge
+{
+    std::string id;
+    std::string challengerUsername;
+
+    std::string speed;
+    std::string color;
+
+    bool rated = false;
+    bool boardCompatible = false;
+    bool active = false;
 };
 
 struct LichessGameInfo
@@ -49,6 +65,23 @@ public:
 
     const std::string&
     getLastError() const;
+
+    bool startEventStream();
+
+    void stopEventStream();
+
+    bool isEventStreamRunning() const;
+
+    bool hasIncomingChallenge() const;
+
+    ~LichessClient();
+
+    LichessChallenge
+    getIncomingChallenge() const;
+
+    bool acceptIncomingChallenge();
+
+    bool declineIncomingChallenge();
 
     // ========================================================
     // TOKEN
@@ -139,6 +172,76 @@ private:
         LichessConnectionState::Disconnected;
 
     LichessGameInfo currentGame;
+
+    // ========================================================
+    // EVENT STREAM
+    // ========================================================
+
+    std::thread eventThread;
+
+    std::atomic<bool> eventStreamRunning{
+        false
+    };
+
+    std::atomic<bool> stopEventStreamRequested{
+        false
+    };
+
+    mutable std::mutex eventMutex;
+
+    std::string eventBuffer;
+
+    LichessChallenge incomingChallenge;
+
+    // ========================================================
+    // STREAM CALLBACKS
+    // ========================================================
+
+    static size_t eventStreamCallback(
+        char* contents,
+        size_t size,
+        size_t nmemb,
+        void* userData);
+
+    void eventStreamLoop();
+
+    void processEventData(
+        const char* data,
+        size_t length);
+
+    void processEventLine(
+        const std::string& line);
+
+    // ========================================================
+    // HTTP
+    // ========================================================
+
+    bool performAuthenticatedPost(
+        const std::string& url);
+
+    bool extractJsonString(
+        const std::string& json,
+        const std::string& key,
+        std::string& result) const;
+
+    bool extractNestedJsonString(
+        const std::string& json,
+        const std::string& objectKey,
+        const std::string& key,
+        std::string& result) const;
+
+    bool jsonContainsTrue(
+        const std::string& json,
+        const std::string& key) const;
+
+
+    static int streamProgressCallback(
+        void* clientPointer,
+        curl_off_t downloadTotal,
+        curl_off_t downloadNow,
+        curl_off_t uploadTotal,
+        curl_off_t uploadNow);
+
 };
 
 #endif

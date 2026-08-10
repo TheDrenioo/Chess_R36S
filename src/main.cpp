@@ -284,6 +284,16 @@ int main(
                 << lichess.getLastError()
                 << std::endl;
         }
+        else
+        {
+            if (!lichess.startEventStream())
+            {
+                std::cerr
+                    << "Could not start Lichess event stream: "
+                    << lichess.getLastError()
+                    << std::endl;
+            }
+        }
     }
 
 
@@ -396,6 +406,90 @@ int main(
                     event.type ==
                     SDL_KEYDOWN)
                 {
+                    // =================================================
+                    // LICHESS INCOMING CHALLENGE
+                    // =================================================
+
+                    if (
+                        menu.getScreen() ==
+                            MenuScreen::Online &&
+                        lichess.hasIncomingChallenge())
+                    {
+                        // ---------------------------------------------
+                        // ACCEPT CHALLENGE
+                        // ENTER / SPACE
+                        // ---------------------------------------------
+
+                        if (
+                            event.key.keysym.sym ==
+                                SDLK_RETURN ||
+                            event.key.keysym.sym ==
+                                SDLK_SPACE)
+                        {
+                            if (
+                                lichess.acceptIncomingChallenge())
+                            {
+                                audio.play(
+                                    "click");
+
+                                std::cout
+                                    << "Lichess challenge accepted."
+                                    << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr
+                                    << "Could not accept challenge: "
+                                    << lichess.getLastError()
+                                    << std::endl;
+
+                                audio.playMoveSound(
+                                    MoveSound::Illegal);
+                            }
+
+                            continue;
+                        }
+
+                        // ---------------------------------------------
+                        // DECLINE CHALLENGE
+                        // BACKSPACE / ESC
+                        // ---------------------------------------------
+
+                        if (
+                            event.key.keysym.sym ==
+                                SDLK_BACKSPACE ||
+                            event.key.keysym.sym ==
+                                SDLK_ESCAPE)
+                        {
+                            if (
+                                lichess.declineIncomingChallenge())
+                            {
+                                audio.play(
+                                    "click");
+
+                                std::cout
+                                    << "Lichess challenge declined."
+                                    << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr
+                                    << "Could not decline challenge: "
+                                    << lichess.getLastError()
+                                    << std::endl;
+
+                                audio.playMoveSound(
+                                    MoveSound::Illegal);
+                            }
+
+                            continue;
+                        }
+                    }
+
+                    // =================================================
+                    // NORMAL MENU CONTROLS
+                    // =================================================
+
                     switch (
                         event.key.keysym.sym)
                     {
@@ -470,7 +564,6 @@ int main(
                                     false;
 
                                 stockfish.stop();
-                                lichess.shutdown();
 
                                 if (
                                     currentConfig.mode ==
@@ -531,6 +624,78 @@ int main(
                     event.type ==
                     SDL_CONTROLLERBUTTONDOWN)
                 {
+                    // =================================================
+                    // LICHESS INCOMING CHALLENGE
+                    // =================================================
+
+                    if (
+                        menu.getScreen() ==
+                            MenuScreen::Online &&
+                        lichess.hasIncomingChallenge())
+                    {
+                        // A = ACCEPT
+                        if (
+                            event.cbutton.button ==
+                                SDL_CONTROLLER_BUTTON_A)
+                        {
+                            if (
+                                lichess.acceptIncomingChallenge())
+                            {
+                                audio.play(
+                                    "click");
+
+                                std::cout
+                                    << "Lichess challenge accepted."
+                                    << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr
+                                    << "Could not accept challenge: "
+                                    << lichess.getLastError()
+                                    << std::endl;
+
+                                audio.playMoveSound(
+                                    MoveSound::Illegal);
+                            }
+
+                            continue;
+                        }
+
+                        // B = DECLINE
+                        if (
+                            event.cbutton.button ==
+                                SDL_CONTROLLER_BUTTON_B)
+                        {
+                            if (
+                                lichess.declineIncomingChallenge())
+                            {
+                                audio.play(
+                                    "click");
+
+                                std::cout
+                                    << "Lichess challenge declined."
+                                    << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr
+                                    << "Could not decline challenge: "
+                                    << lichess.getLastError()
+                                    << std::endl;
+
+                                audio.playMoveSound(
+                                    MoveSound::Illegal);
+                            }
+
+                            continue;
+                        }
+                    }
+
+                    // =================================================
+                    // NORMAL MENU CONTROLS
+                    // =================================================
+
                     switch (
                         event.cbutton.button)
                     {
@@ -604,7 +769,7 @@ int main(
                                     false;
 
                                 stockfish.stop();
-                                lichess.shutdown();
+
 
                                 if (
                                     currentConfig.mode ==
@@ -721,7 +886,6 @@ int main(
                                 chessClock.stop();
 
                                 stockfish.stop();
-                                lichess.shutdown();
 
                                 menu.reset();
 
@@ -743,7 +907,6 @@ int main(
                             chessClock.stop();
 
                             stockfish.stop();
-                            lichess.shutdown();
 
                             menu.reset();
 
@@ -998,7 +1161,6 @@ int main(
                                 chessClock.stop();
 
                                 stockfish.stop();
-                                lichess.shutdown();
 
                                 menu.reset();
 
@@ -1203,7 +1365,6 @@ int main(
                             chessClock.stop();
 
                             stockfish.stop();
-                            lichess.shutdown();
 
                             menu.reset();
 
