@@ -5,6 +5,7 @@
 #include "Renderer.h"
 #include "StockfishEngine.h"
 #include "ChessClock.h"
+#include "LichessClient.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -265,6 +266,26 @@ int main(
     
     StockfishEngine stockfish;
 
+    LichessClient lichess;
+
+    if (!lichess.initialize())
+    {
+        std::cerr
+            << "Could not initialize Lichess client: "
+            << lichess.getLastError()
+            << std::endl;
+    }
+    else
+    {
+        if (!lichess.authenticate())
+        {
+            std::cerr
+                << "Lichess authentication failed: "
+                << lichess.getLastError()
+                << std::endl;
+        }
+    }
+
 
     // ========================================================
     // APPLICATION
@@ -449,6 +470,7 @@ int main(
                                     false;
 
                                 stockfish.stop();
+                                lichess.shutdown();
 
                                 if (
                                     currentConfig.mode ==
@@ -582,6 +604,7 @@ int main(
                                     false;
 
                                 stockfish.stop();
+                                lichess.shutdown();
 
                                 if (
                                     currentConfig.mode ==
@@ -698,6 +721,7 @@ int main(
                                 chessClock.stop();
 
                                 stockfish.stop();
+                                lichess.shutdown();
 
                                 menu.reset();
 
@@ -719,6 +743,7 @@ int main(
                             chessClock.stop();
 
                             stockfish.stop();
+                            lichess.shutdown();
 
                             menu.reset();
 
@@ -973,6 +998,7 @@ int main(
                                 chessClock.stop();
 
                                 stockfish.stop();
+                                lichess.shutdown();
 
                                 menu.reset();
 
@@ -1177,6 +1203,7 @@ int main(
                             chessClock.stop();
 
                             stockfish.stop();
+                            lichess.shutdown();
 
                             menu.reset();
 
@@ -1198,25 +1225,112 @@ int main(
             AppState::Menu)
         {
             renderer.renderMenu(
-                menu);
+                menu,
+                lichess);
         }
         else
         {
+            // =================================================
+            // BOARD ORIENTATION
+            // =================================================
+
             bool boardFlipped = false;
 
             if (
                 currentConfig.mode ==
-                    GameMode::PlayerVsComputer)
+                GameMode::PlayerVsComputer)
             {
                 boardFlipped =
                     !currentConfig.humanIsWhite;
             }
+            else if (
+                currentConfig.mode ==
+                    GameMode::Online &&
+                lichess.getCurrentGame().active)
+            {
+                boardFlipped =
+                    !lichess
+                        .getCurrentGame()
+                        .playerIsWhite;
+            }
+
+            // =================================================
+            // OPPONENT INFORMATION
+            // =================================================
+
+            std::string opponentName =
+                currentConfig.opponentName;
 
             bool opponentIsWhite =
+                false;
+
+            // -------------------------------------------------
+            // VS STOCKFISH
+            // -------------------------------------------------
+
+            if (
                 currentConfig.mode ==
-                    GameMode::PlayerVsComputer
-                    ? !currentConfig.humanIsWhite
-                    : false;
+                GameMode::PlayerVsComputer)
+            {
+                opponentName =
+                    "STOCKFISH";
+
+                opponentIsWhite =
+                    !currentConfig.humanIsWhite;
+            }
+
+            // -------------------------------------------------
+            // LOCAL TWO PLAYER
+            // -------------------------------------------------
+
+            else if (
+                currentConfig.mode ==
+                GameMode::PlayerVsPlayer)
+            {
+                opponentName =
+                    "PLAYER 2";
+
+                opponentIsWhite =
+                    false;
+            }
+
+            // -------------------------------------------------
+            // ONLINE LICHESS
+            // -------------------------------------------------
+
+            else if (
+                currentConfig.mode ==
+                    GameMode::Online &&
+                lichess.getCurrentGame().active)
+            {
+                const LichessGameInfo& onlineGame =
+                    lichess.getCurrentGame();
+
+                if (onlineGame.playerIsWhite)
+                {
+                    // We are White.
+                    // Opponent is Black.
+                    opponentName =
+                        onlineGame.blackUsername;
+
+                    opponentIsWhite =
+                        false;
+                }
+                else
+                {
+                    // We are Black.
+                    // Opponent is White.
+                    opponentName =
+                        onlineGame.whiteUsername;
+
+                    opponentIsWhite =
+                        true;
+                }
+            }
+
+            // =================================================
+            // DRAW GAME
+            // =================================================
 
             renderer.render(
                 game,
@@ -1224,12 +1338,12 @@ int main(
                 cursorRow,
                 cursorCol,
                 boardFlipped,
-                currentConfig.opponentName,
+                opponentName,
                 opponentIsWhite);
 
-            // ================================================
+            // =================================================
             // STOCKFISH
-            // ================================================
+            // =================================================
 
             if (
                 computerMovePending &&
@@ -1266,6 +1380,7 @@ int main(
     // ========================================================
 
     stockfish.stop();
+    lichess.shutdown();
 
     if (controller)
     {

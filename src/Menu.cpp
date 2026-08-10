@@ -15,13 +15,15 @@ void Menu::reset()
 
 void Menu::moveUp()
 {
-    if (screen == MenuScreen::Main)
+    if (
+        screen ==
+        MenuScreen::Main)
     {
         selectedOption--;
 
         if (selectedOption < 0)
         {
-            selectedOption = 3;
+            selectedOption = 4;
         }
     }
     else if (
@@ -43,7 +45,7 @@ void Menu::moveDown()
     {
         selectedOption++;
 
-        if (selectedOption > 3)
+        if (selectedOption > 4)
         {
             selectedOption = 0;
         }
@@ -115,6 +117,10 @@ MenuAction Menu::select()
     {
         switch (selectedOption)
         {
+            // -----------------------------------------
+            // VS STOCKFISH
+            // -----------------------------------------
+
             case 0:
                 config.mode =
                     GameMode::
@@ -123,7 +129,27 @@ MenuAction Menu::select()
                 return
                     MenuAction::StartGame;
 
+            // -----------------------------------------
+            // ONLINE
+            // -----------------------------------------
+
             case 1:
+                config.mode =
+                    GameMode::Online;
+
+                screen =
+                    MenuScreen::Online;
+
+                selectedOption = 0;
+
+                return
+                    MenuAction::None;
+
+            // -----------------------------------------
+            // LOCAL TWO PLAYER
+            // -----------------------------------------
+
+            case 2:
                 config.mode =
                     GameMode::
                         PlayerVsPlayer;
@@ -131,7 +157,11 @@ MenuAction Menu::select()
                 return
                     MenuAction::StartGame;
 
-            case 2:
+            // -----------------------------------------
+            // SETTINGS
+            // -----------------------------------------
+
+            case 3:
                 screen =
                     MenuScreen::Settings;
 
@@ -140,7 +170,11 @@ MenuAction Menu::select()
                 return
                     MenuAction::None;
 
-            case 3:
+            // -----------------------------------------
+            // EXIT
+            // -----------------------------------------
+
+            case 4:
                 return
                     MenuAction::Exit;
         }
@@ -180,7 +214,9 @@ void Menu::back()
 {
     if (
         screen ==
-        MenuScreen::Settings)
+            MenuScreen::Settings ||
+        screen ==
+            MenuScreen::Online)
     {
         screen =
             MenuScreen::Main;

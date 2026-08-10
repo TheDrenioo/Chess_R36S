@@ -4,6 +4,7 @@
 #include "ChessGame.h"
 #include "Menu.h"
 #include "ChessClock.h"
+#include "LichessClient.h"
 
 #include <SDL.h>
 
@@ -14,7 +15,8 @@ class Renderer
 {
 public:
     void renderMenu(
-    const Menu& menu);
+        const Menu& menu,
+        const LichessClient& lichess);
 
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;

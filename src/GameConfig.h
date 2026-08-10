@@ -6,7 +6,8 @@
 enum class GameMode
 {
     PlayerVsComputer,
-    PlayerVsPlayer
+    PlayerVsPlayer,
+    Online
 };
 
 enum class Difficulty

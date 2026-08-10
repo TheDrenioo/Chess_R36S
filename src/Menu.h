@@ -6,7 +6,8 @@
 enum class MenuScreen
 {
     Main,
-    Settings
+    Settings,
+    Online
 };
 
 enum class MenuAction

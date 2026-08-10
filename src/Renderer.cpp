@@ -1599,14 +1599,8 @@ void Renderer::drawSmallText(
 
     for (char character : text)
     {
-        char upper =
-            static_cast<char>(
-                std::toupper(
-                    static_cast<unsigned char>(
-                        character)));
-
         drawCharacter(
-            upper,
+            character,
             currentX,
             y,
             scale);
@@ -1622,736 +1616,834 @@ void Renderer::drawCharacter(
     int y,
     int scale)
 {
-    const int segmentWidth =
-        4 * scale;
-
-    const int segmentHeight =
-        6 * scale;
-
-    SDL_Rect rect;
-
-    auto horizontal =
-        [&](int offsetY)
+    if (scale <= 0)
     {
-        rect = {
-            x,
-            y + offsetY,
-            segmentWidth,
-            scale
-        };
+        return;
+    }
 
-        SDL_RenderFillRect(
-            renderer,
-            &rect);
-    };
+    character =
+        static_cast<char>(
+            std::toupper(
+                static_cast<unsigned char>(
+                    character)));
 
-    auto verticalLeft =
-        [&](int offsetY)
-    {
-        rect = {
-            x,
-            y + offsetY,
-            scale,
-            segmentHeight / 2
-        };
-
-        SDL_RenderFillRect(
-            renderer,
-            &rect);
-    };
-
-    auto verticalRight =
-        [&](int offsetY)
-    {
-        rect = {
-            x +
-                segmentWidth -
-                scale,
-
-            y + offsetY,
-
-            scale,
-
-            segmentHeight / 2
-        };
-
-        SDL_RenderFillRect(
-            renderer,
-            &rect);
+    // 5x7 bitmap font.
+    // Each string represents one row.
+    const char* pattern[7] = {
+        "00000",
+        "00000",
+        "00000",
+        "00000",
+        "00000",
+        "00000",
+        "00000"
     };
 
     switch (character)
     {
+        // ====================================================
+        // LETTERS
+        // ====================================================
+
         case 'A':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-
-            verticalLeft(0);
-            verticalRight(0);
-
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'B':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'C':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-            break;
-
-        case 'D':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'E':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-            break;
-
-        case 'F':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-            break;
-
-        case 'G':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            horizontal(
-                segmentHeight / 2);
-
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'H':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            horizontal(
-                segmentHeight / 2);
-            break;
-
-        case 'I':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            rect = {
-                x +
-                    segmentWidth / 2 -
-                    scale / 2,
-
-                y,
-
-                scale,
-
-                segmentHeight
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &rect);
-            break;
-
-        case 'L':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            horizontal(
-                segmentHeight);
-            break;
-
-        case 'M':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            rect = {
-                x +
-                    segmentWidth / 2 -
-                    scale / 2,
-
-                y,
-
-                scale,
-
-                segmentHeight / 2
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &rect);
-            break;
-
-        case 'N':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'O':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'P':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            break;
-
-        case 'R':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight / 2,
-
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'S':
-            horizontal(0);
-            horizontal(
-                segmentHeight / 2);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalRight(
-                segmentHeight / 2);
-            break;
-
-        case 'T':
-            horizontal(0);
-
-            rect = {
-                x +
-                    segmentWidth / 2 -
-                    scale / 2,
-
-                y,
-
-                scale,
-
-                segmentHeight
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &rect);
-            break;
-
-        case 'U':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            horizontal(
-                segmentHeight);
-            break;
-
-        case 'V':
-            verticalLeft(0);
-            verticalRight(0);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y +
-                    segmentHeight / 2,
-
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight / 2,
-
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'K':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y +
-                    segmentHeight / 2,
-                x +
-                    segmentWidth,
-                y);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y +
-                    segmentHeight / 2,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'Q':
-            horizontal(0);
-            horizontal(
-                segmentHeight);
-
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight / 2,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'W':
-            verticalLeft(0);
-            verticalLeft(
-                segmentHeight / 2);
-
-            verticalRight(0);
-            verticalRight(
-                segmentHeight / 2);
-
-            horizontal(
-                segmentHeight);
-            break;
-
-        case 'X':
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth,
-                y,
-                x,
-                y +
-                    segmentHeight);
-            break;
-
-        case 'Y':
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y,
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight / 2);
-
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth,
-                y,
-                x +
-                    segmentWidth / 2,
-                y +
-                    segmentHeight / 2);
-
-            rect = {
-                x +
-                    segmentWidth / 2 -
-                    scale / 2,
-
-                y +
-                    segmentHeight / 2,
-
-                scale,
-
-                segmentHeight / 2
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &rect);
-            break;
-
-        case ' ':
-            break;
-
-        case '0':
-            horizontal(0);
-            horizontal(segmentHeight);
-            verticalLeft(0);
-            verticalLeft(segmentHeight / 2);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '1':
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '2':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalRight(0);
-            verticalLeft(segmentHeight / 2);
-            break;
-
-        case '3':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '4':
-            horizontal(segmentHeight / 2);
-            verticalLeft(0);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '5':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalLeft(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '6':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalLeft(0);
-            verticalLeft(segmentHeight / 2);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '7':
-            horizontal(0);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '8':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalLeft(0);
-            verticalLeft(segmentHeight / 2);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case '9':
-            horizontal(0);
-            horizontal(segmentHeight / 2);
-            horizontal(segmentHeight);
-            verticalLeft(0);
-            verticalRight(0);
-            verticalRight(segmentHeight / 2);
-            break;
-
-        case ':':
         {
-            SDL_Rect topDot = {
-                x + scale,
-                y +
-                    segmentHeight / 3,
-
-                scale,
-                scale
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10001",
+                "11111",
+                "10001",
+                "10001",
+                "10001"
             };
 
-            SDL_Rect bottomDot = {
-                x + scale,
-                y +
-                    2 *
-                    segmentHeight /
-                    3,
-
-                scale,
-                scale
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &topDot);
-
-            SDL_RenderFillRect(
-                renderer,
-                &bottomDot);
-
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
         }
 
-        case '>':
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight / 2);
+        case 'B':
+        {
+            static const char* p[7] = {
+                "11110",
+                "10001",
+                "10001",
+                "11110",
+                "10001",
+                "10001",
+                "11110"
+            };
 
-            SDL_RenderDrawLine(
-                renderer,
-                x +
-                    segmentWidth,
-                y +
-                    segmentHeight / 2,
-
-                x,
-                y +
-                    segmentHeight);
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
+        }
+
+        case 'C':
+        {
+            static const char* p[7] = {
+                "01111",
+                "10000",
+                "10000",
+                "10000",
+                "10000",
+                "10000",
+                "01111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'D':
+        {
+            static const char* p[7] = {
+                "11110",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "11110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'E':
+        {
+            static const char* p[7] = {
+                "11111",
+                "10000",
+                "10000",
+                "11110",
+                "10000",
+                "10000",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'F':
+        {
+            static const char* p[7] = {
+                "11111",
+                "10000",
+                "10000",
+                "11110",
+                "10000",
+                "10000",
+                "10000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'G':
+        {
+            static const char* p[7] = {
+                "01111",
+                "10000",
+                "10000",
+                "10111",
+                "10001",
+                "10001",
+                "01111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'H':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "10001",
+                "11111",
+                "10001",
+                "10001",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'I':
+        {
+            static const char* p[7] = {
+                "11111",
+                "00100",
+                "00100",
+                "00100",
+                "00100",
+                "00100",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'J':
+        {
+            static const char* p[7] = {
+                "00111",
+                "00010",
+                "00010",
+                "00010",
+                "10010",
+                "10010",
+                "01100"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'K':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10010",
+                "10100",
+                "11000",
+                "10100",
+                "10010",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'L':
+        {
+            static const char* p[7] = {
+                "10000",
+                "10000",
+                "10000",
+                "10000",
+                "10000",
+                "10000",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'M':
+        {
+            static const char* p[7] = {
+                "10001",
+                "11011",
+                "10101",
+                "10101",
+                "10001",
+                "10001",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'N':
+        {
+            static const char* p[7] = {
+                "10001",
+                "11001",
+                "10101",
+                "10011",
+                "10001",
+                "10001",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'O':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'P':
+        {
+            static const char* p[7] = {
+                "11110",
+                "10001",
+                "10001",
+                "11110",
+                "10000",
+                "10000",
+                "10000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'Q':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10001",
+                "10001",
+                "10101",
+                "10010",
+                "01101"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'R':
+        {
+            static const char* p[7] = {
+                "11110",
+                "10001",
+                "10001",
+                "11110",
+                "10100",
+                "10010",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'S':
+        {
+            static const char* p[7] = {
+                "01111",
+                "10000",
+                "10000",
+                "01110",
+                "00001",
+                "00001",
+                "11110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'T':
+        {
+            static const char* p[7] = {
+                "11111",
+                "00100",
+                "00100",
+                "00100",
+                "00100",
+                "00100",
+                "00100"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'U':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'V':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "01010",
+                "00100"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'W':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "10001",
+                "10101",
+                "10101",
+                "10101",
+                "01010"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'X':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "01010",
+                "00100",
+                "01010",
+                "10001",
+                "10001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'Y':
+        {
+            static const char* p[7] = {
+                "10001",
+                "10001",
+                "01010",
+                "00100",
+                "00100",
+                "00100",
+                "00100"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case 'Z':
+        {
+            static const char* p[7] = {
+                "11111",
+                "00001",
+                "00010",
+                "00100",
+                "01000",
+                "10000",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        // ====================================================
+        // NUMBERS
+        // ====================================================
+
+        case '0':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10011",
+                "10101",
+                "11001",
+                "10001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '1':
+        {
+            static const char* p[7] = {
+                "00100",
+                "01100",
+                "00100",
+                "00100",
+                "00100",
+                "00100",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '2':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "00001",
+                "00010",
+                "00100",
+                "01000",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '3':
+        {
+            static const char* p[7] = {
+                "11110",
+                "00001",
+                "00001",
+                "01110",
+                "00001",
+                "00001",
+                "11110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '4':
+        {
+            static const char* p[7] = {
+                "00010",
+                "00110",
+                "01010",
+                "10010",
+                "11111",
+                "00010",
+                "00010"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '5':
+        {
+            static const char* p[7] = {
+                "11111",
+                "10000",
+                "10000",
+                "11110",
+                "00001",
+                "00001",
+                "11110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '6':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10000",
+                "10000",
+                "11110",
+                "10001",
+                "10001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '7':
+        {
+            static const char* p[7] = {
+                "11111",
+                "00001",
+                "00010",
+                "00100",
+                "01000",
+                "01000",
+                "01000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '8':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10001",
+                "01110",
+                "10001",
+                "10001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '9':
+        {
+            static const char* p[7] = {
+                "01110",
+                "10001",
+                "10001",
+                "01111",
+                "00001",
+                "00001",
+                "01110"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        // ====================================================
+        // SYMBOLS
+        // ====================================================
 
         case '.':
         {
-            SDL_Rect dot = {
-                x + scale,
-                y + segmentHeight,
-                scale,
-                scale
+            static const char* p[7] = {
+                "00000",
+                "00000",
+                "00000",
+                "00000",
+                "00000",
+                "00110",
+                "00110"
             };
 
-            SDL_RenderFillRect(
-                renderer,
-                &dot);
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
 
+        case ':':
+        {
+            static const char* p[7] = {
+                "00000",
+                "00110",
+                "00110",
+                "00000",
+                "00110",
+                "00110",
+                "00000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
         }
 
         case '+':
         {
-            SDL_Rect horizontalBar = {
-                x,
-                y + segmentHeight / 2,
-                segmentWidth,
-                scale
+            static const char* p[7] = {
+                "00000",
+                "00100",
+                "00100",
+                "11111",
+                "00100",
+                "00100",
+                "00000"
             };
 
-            SDL_Rect verticalBar = {
-                x + segmentWidth / 2,
-                y + segmentHeight / 4,
-                scale,
-                segmentHeight / 2
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &horizontalBar);
-
-            SDL_RenderFillRect(
-                renderer,
-                &verticalBar);
-
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
         }
 
-        case '#':
+        case '-':
         {
-            SDL_RenderDrawLine(
-                renderer,
-                x + scale,
-                y,
-                x + scale,
-                y + segmentHeight);
+            static const char* p[7] = {
+                "00000",
+                "00000",
+                "00000",
+                "11111",
+                "00000",
+                "00000",
+                "00000"
+            };
 
-            SDL_RenderDrawLine(
-                renderer,
-                x + 3 * scale,
-                y,
-                x + 3 * scale,
-                y + segmentHeight);
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
 
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y + 2 * scale,
-                x + segmentWidth,
-                y + 2 * scale);
+        case '_':
+        {
+            static const char* p[7] = {
+                "00000",
+                "00000",
+                "00000",
+                "00000",
+                "00000",
+                "00000",
+                "11111"
+            };
 
-            SDL_RenderDrawLine(
-                renderer,
-                x,
-                y + 4 * scale,
-                x + segmentWidth,
-                y + 4 * scale);
-
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
         }
 
         case '=':
         {
-            SDL_Rect top = {
-                x,
-                y + 2 * scale,
-                segmentWidth,
-                scale
+            static const char* p[7] = {
+                "00000",
+                "00000",
+                "11111",
+                "00000",
+                "11111",
+                "00000",
+                "00000"
             };
 
-            SDL_Rect bottom = {
-                x,
-                y + 4 * scale,
-                segmentWidth,
-                scale
-            };
-
-            SDL_RenderFillRect(
-                renderer,
-                &top);
-
-            SDL_RenderFillRect(
-                renderer,
-                &bottom);
-
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
         }
 
+        case '#':
+        {
+            static const char* p[7] = {
+                "01010",
+                "01010",
+                "11111",
+                "01010",
+                "11111",
+                "01010",
+                "01010"
+            };
 
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '/':
+        {
+            static const char* p[7] = {
+                "00001",
+                "00010",
+                "00010",
+                "00100",
+                "01000",
+                "01000",
+                "10000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '>':
+        {
+            static const char* p[7] = {
+                "10000",
+                "01000",
+                "00100",
+                "00010",
+                "00100",
+                "01000",
+                "10000"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case '<':
+        {
+            static const char* p[7] = {
+                "00001",
+                "00010",
+                "00100",
+                "01000",
+                "00100",
+                "00010",
+                "00001"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
+            break;
+        }
+
+        case ' ':
+            return;
 
         default:
+        {
+            // Unknown character -> small box.
+            static const char* p[7] = {
+                "11111",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "10001",
+                "11111"
+            };
+
+            for (int i = 0; i < 7; i++) pattern[i] = p[i];
             break;
+        }
+    }
+
+    // ========================================================
+    // DRAW BITMAP
+    // ========================================================
+
+    for (int row = 0;
+         row < 7;
+         row++)
+    {
+        for (int col = 0;
+             col < 5;
+             col++)
+        {
+            if (
+                pattern[row][col] !=
+                '1')
+            {
+                continue;
+            }
+
+            SDL_Rect pixel = {
+                x +
+                    col * scale,
+
+                y +
+                    row * scale,
+
+                scale,
+                scale
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &pixel);
+        }
     }
 }
 
@@ -2424,7 +2516,8 @@ void Renderer::drawMenuItem(
 // ============================================================
 
 void Renderer::renderMenu(
-    const Menu& menu)
+    const Menu& menu,
+    const LichessClient& lichess)
 {
     SDL_SetRenderDrawColor(
         renderer,
@@ -2486,34 +2579,42 @@ void Renderer::renderMenu(
 
         drawMenuItem(
             "PLAY VS COMPUTER",
-            180,
             170,
+            150,
             selected == 0);
 
         drawMenuItem(
-            "TWO PLAYERS",
-            180,
-            225,
+            "PLAY ONLINE",
+            170,
+            200,
             selected == 1);
 
         drawMenuItem(
-            "SETTINGS",
-            180,
-            280,
+            "TWO PLAYERS",
+            170,
+            250,
             selected == 2);
 
         drawMenuItem(
-            "EXIT",
-            180,
-            335,
+            "SETTINGS",
+            170,
+            300,
             selected == 3);
+
+        drawMenuItem(
+            "EXIT",
+            170,
+            350,
+            selected == 4);
     }
 
     // ========================================================
     // SETTINGS
     // ========================================================
 
-    else
+    else if (
+        menu.getScreen() ==
+        MenuScreen::Settings)
     {
         int selected =
             menu.getSelectedOption();
@@ -2610,6 +2711,171 @@ void Renderer::renderMenu(
             145,
             325,
             selected == 3);
+    }
+
+    else if (
+        menu.getScreen() ==
+        MenuScreen::Online)
+    {
+        // ========================================================
+        // LICHESS ONLINE SCREEN
+        // ========================================================
+
+        SDL_SetRenderDrawColor(
+            renderer,
+            238,
+            238,
+            210,
+            255);
+
+        drawMenuText(
+            "LICHESS",
+            225,
+            155,
+            5);
+
+        // ========================================================
+        // CONNECTION STATUS
+        // ========================================================
+
+        if (lichess.isConnected())
+        {
+            // ====================================================
+            // CONNECTED
+            // ====================================================
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                118,
+                150,
+                86,
+                255);
+
+            SDL_Rect connectionLight = {
+                185,
+                219,
+                12,
+                12
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &connectionLight);
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                210,
+                230,
+                210,
+                255);
+
+            drawMenuText(
+                "CONNECTED",
+                215,
+                215,
+                3);
+
+            // ====================================================
+            // ACCOUNT LABEL
+            // ====================================================
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                150,
+                150,
+                150,
+                255);
+
+            drawMenuText(
+                "USER",
+                245,
+                270,
+                2);
+
+            // ====================================================
+            // USERNAME
+            // ====================================================
+
+            std::string username =
+                lichess.getUsername();
+
+            constexpr std::size_t maxUsernameLength =
+                16;
+
+            if (
+                username.length() >
+                maxUsernameLength)
+            {
+                username =
+                    username.substr(
+                        0,
+                        maxUsernameLength);
+            }
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                238,
+                238,
+                210,
+                255);
+
+            drawMenuText(
+                username,
+                180,
+                305,
+                3);
+        }
+        else
+        {
+            // Red connection indicator
+            SDL_SetRenderDrawColor(
+                renderer,
+                190,
+                65,
+                65,
+                255);
+
+            SDL_Rect connectionLight = {
+                170,
+                239,
+                12,
+                12
+            };
+
+            SDL_RenderFillRect(
+                renderer,
+                &connectionLight);
+
+            SDL_SetRenderDrawColor(
+                renderer,
+                200,
+                170,
+                170,
+                255);
+
+            drawMenuText(
+                "NOT CONNECTED",
+                200,
+                235,
+                3);
+        }
+
+        // ========================================================
+        // BACK
+        // ========================================================
+
+        SDL_SetRenderDrawColor(
+            renderer,
+            118,
+            150,
+            86,
+            255);
+
+        drawMenuText(
+            "B BACK",
+            245,
+            380,
+            2);
     }
 
     SDL_RenderPresent(
