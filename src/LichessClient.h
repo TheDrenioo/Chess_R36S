@@ -46,6 +46,7 @@ struct LichessGameInfo
     std::string status;
 
     bool active = false;
+    bool initialized = false;
 };
 
 class LichessClient
@@ -76,6 +77,16 @@ public:
 
     ~LichessClient();
 
+    bool startGameStream(
+        const std::string& gameId);
+
+    void stopGameStream();
+
+    bool isGameStreamRunning() const;
+
+    LichessGameInfo
+    getCurrentGameSnapshot() const;
+
     LichessChallenge
     getIncomingChallenge() const;
 
@@ -96,6 +107,13 @@ public:
 
     const std::string&
     getToken() const;
+
+    bool sendMove(
+        const std::string& gameId,
+        const std::string& move);
+
+    bool resignGame(
+        const std::string& gameId);
 
     // ========================================================
     // USER
@@ -172,6 +190,50 @@ private:
         LichessConnectionState::Disconnected;
 
     LichessGameInfo currentGame;
+
+    // ========================================================
+    // GAME STREAM
+    // ========================================================
+
+    std::thread gameThread;
+
+    std::atomic<bool> gameStreamRunning{
+        false
+    };
+
+    std::atomic<bool> stopGameStreamRequested{
+        false
+    };
+
+    std::string gameBuffer;
+
+    static size_t gameStreamCallback(
+        char* contents,
+        size_t size,
+        size_t nmemb,
+        void* userData);
+
+    static int gameStreamProgressCallback(
+        void* clientPointer,
+        curl_off_t downloadTotal,
+        curl_off_t downloadNow,
+        curl_off_t uploadTotal,
+        curl_off_t uploadNow);
+
+    void gameStreamLoop(
+        std::string gameId);
+
+    void processGameData(
+        const char* data,
+        size_t length);
+
+    void processGameLine(
+        const std::string& line);
+
+    bool extractJsonInteger(
+        const std::string& json,
+        const std::string& key,
+        int& value) const;
 
     // ========================================================
     // EVENT STREAM

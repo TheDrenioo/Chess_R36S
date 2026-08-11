@@ -60,3 +60,14 @@ add_custom_command(
 
     "$<TARGET_FILE_DIR:ChessR36S>/libcurl-x64.dll"
 )
+
+add_custom_command(
+    TARGET ChessR36S
+    POST_BUILD
+
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/curl/bin/curl-ca-bundle.crt"
+
+    "$<TARGET_FILE_DIR:ChessR36S>/curl-ca-bundle.crt"
+)

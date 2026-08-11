@@ -75,6 +75,9 @@ public:
 
     int getSelectedRow() const;
 
+    const std::string&
+    getLastMoveUCI() const;
+
     int getSelectedCol() const;
 
     bool kingInCheck(
@@ -101,6 +104,8 @@ private:
     bool whiteTurn = true;
 
     bool pieceSelected = false;
+
+    std::string lastMoveUCI;
 
     int selectedRow = -1;
     int selectedCol = -1;

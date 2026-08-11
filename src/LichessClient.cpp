@@ -11,6 +11,8 @@ LichessClient::LichessClient()
 
 LichessClient::~LichessClient()
 {
+    stopGameStream();
+
     stopEventStream();
 
     shutdown();
@@ -113,6 +115,13 @@ bool LichessClient::performAuthenticatedGet(
         return false;
     }
 
+    char errorBuffer[CURL_ERROR_SIZE] = {0};
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_ERRORBUFFER,
+        errorBuffer);
+
     response.clear();
 
     std::string authorization =
@@ -162,15 +171,50 @@ bool LichessClient::performAuthenticatedGet(
         CURLOPT_FOLLOWLOCATION,
         1L);
 
+    // ========================================================
+    // WINDOWS TLS / CERTIFICATES
+    // ========================================================
+
+    // Use Windows native certificate store.
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_OPTIONS,
+        CURLSSLOPT_NATIVE_CA);
+
+    // Also provide curl's CA bundle as fallback.
+    curl_easy_setopt(
+        curl,
+        CURLOPT_CAINFO,
+        "external/curl/bin/curl-ca-bundle.crt");
+
+    // TLS verification remains ENABLED.
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYPEER,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYHOST,
+        2L);
+
     CURLcode result =
         curl_easy_perform(
             curl);
 
     if (result != CURLE_OK)
     {
-        lastError =
-            curl_easy_strerror(
-                result);
+        if (errorBuffer[0] != '\0')
+        {
+            lastError =
+                errorBuffer;
+        }
+        else
+        {
+            lastError =
+                curl_easy_strerror(
+                    result);
+        }
 
         curl_slist_free_all(
             headers);
@@ -270,6 +314,695 @@ bool LichessClient::extractUsernameFromJson(
                 1);
 
     return !result.empty();
+}
+
+bool LichessClient::extractJsonInteger(
+    const std::string& json,
+    const std::string& key,
+    int& value) const
+{
+    std::string searchKey =
+        "\"" + key + "\"";
+
+    std::size_t keyPosition =
+        json.find(searchKey);
+
+    if (
+        keyPosition ==
+        std::string::npos)
+    {
+        return false;
+    }
+
+    std::size_t colonPosition =
+        json.find(
+            ':',
+            keyPosition +
+                searchKey.length());
+
+    if (
+        colonPosition ==
+        std::string::npos)
+    {
+        return false;
+    }
+
+    std::size_t numberStart =
+        colonPosition + 1;
+
+    while (
+        numberStart <
+            json.length() &&
+        std::isspace(
+            static_cast<unsigned char>(
+                json[numberStart])))
+    {
+        numberStart++;
+    }
+
+    std::size_t numberEnd =
+        numberStart;
+
+    while (
+        numberEnd <
+            json.length() &&
+        std::isdigit(
+            static_cast<unsigned char>(
+                json[numberEnd])))
+    {
+        numberEnd++;
+    }
+
+    if (
+        numberEnd ==
+        numberStart)
+    {
+        return false;
+    }
+
+    value =
+        std::stoi(
+            json.substr(
+                numberStart,
+                numberEnd -
+                    numberStart));
+
+    return true;
+}
+
+size_t LichessClient::gameStreamCallback(
+    char* contents,
+    size_t size,
+    size_t nmemb,
+    void* userData)
+{
+    size_t totalSize =
+        size * nmemb;
+
+    LichessClient* client =
+        static_cast<LichessClient*>(
+            userData);
+
+    if (!client)
+    {
+        return 0;
+    }
+
+    client->processGameData(
+        contents,
+        totalSize);
+
+    return totalSize;
+}
+
+int LichessClient::gameStreamProgressCallback(
+    void* clientPointer,
+    curl_off_t,
+    curl_off_t,
+    curl_off_t,
+    curl_off_t)
+{
+    LichessClient* client =
+        static_cast<LichessClient*>(
+            clientPointer);
+
+    if (!client)
+    {
+        return 1;
+    }
+
+    return
+        client
+            ->stopGameStreamRequested
+        ? 1
+        : 0;
+}
+
+void LichessClient::processGameData(
+    const char* data,
+    size_t length)
+{
+    gameBuffer.append(
+        data,
+        length);
+
+    while (true)
+    {
+        std::size_t newline =
+            gameBuffer.find('\n');
+
+        if (
+            newline ==
+            std::string::npos)
+        {
+            break;
+        }
+
+        std::string line =
+            gameBuffer.substr(
+                0,
+                newline);
+
+        gameBuffer.erase(
+            0,
+            newline + 1);
+
+        if (
+            !line.empty() &&
+            line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
+        if (line.empty())
+        {
+            continue;
+        }
+
+        processGameLine(
+            line);
+    }
+}
+
+void LichessClient::processGameLine(
+    const std::string& line)
+{
+    // ========================================================
+    // GAME FULL
+    // ========================================================
+
+    if (
+        line.find(
+            "\"type\":\"gameFull\"") !=
+            std::string::npos ||
+        line.find(
+            "\"type\": \"gameFull\"") !=
+            std::string::npos)
+    {
+        std::cout
+        << "[LICHESS] gameFull received."
+        << std::endl;
+
+        LichessGameInfo updated;
+
+        {
+            std::lock_guard<std::mutex>
+                lock(eventMutex);
+
+            updated.gameId =
+                currentGame.gameId;
+        }
+
+
+        // ----------------------------------------------------
+        // WHITE
+        // ----------------------------------------------------
+
+        extractNestedJsonString(
+            line,
+            "white",
+            "name",
+            updated.whiteUsername);
+
+        if (
+            updated.whiteUsername.empty())
+        {
+            extractNestedJsonString(
+                line,
+                "white",
+                "id",
+                updated.whiteUsername);
+        }
+
+        // ----------------------------------------------------
+        // BLACK
+        // ----------------------------------------------------
+
+        extractNestedJsonString(
+            line,
+            "black",
+            "name",
+            updated.blackUsername);
+
+        if (
+            updated.blackUsername.empty())
+        {
+            extractNestedJsonString(
+                line,
+                "black",
+                "id",
+                updated.blackUsername);
+        }
+
+        // ----------------------------------------------------
+        // STATE OBJECT
+        // ----------------------------------------------------
+
+        std::size_t statePosition =
+            line.find(
+                "\"state\"");
+
+        if (
+            statePosition !=
+            std::string::npos)
+        {
+            std::string stateJson =
+                line.substr(
+                    statePosition);
+
+            extractJsonString(
+                stateJson,
+                "moves",
+                updated.moves);
+
+            extractJsonString(
+                stateJson,
+                "status",
+                updated.status);
+
+            extractJsonInteger(
+                stateJson,
+                "wtime",
+                updated.whiteTimeMs);
+
+            extractJsonInteger(
+                stateJson,
+                "btime",
+                updated.blackTimeMs);
+        }
+
+        // ----------------------------------------------------
+        // PLAYER COLOR
+        // ----------------------------------------------------
+
+        std::string ownLower =
+            username;
+
+        std::string whiteLower =
+            updated.whiteUsername;
+
+        std::transform(
+            ownLower.begin(),
+            ownLower.end(),
+            ownLower.begin(),
+            [](unsigned char c)
+            {
+                return
+                    static_cast<char>(
+                        std::tolower(c));
+            });
+
+        std::transform(
+            whiteLower.begin(),
+            whiteLower.end(),
+            whiteLower.begin(),
+            [](unsigned char c)
+            {
+                return
+                    static_cast<char>(
+                        std::tolower(c));
+            });
+
+        updated.playerIsWhite =
+            ownLower ==
+            whiteLower;
+
+        std::cout
+            << "[LICHESS] Playing as: "
+            << (
+                updated.playerIsWhite
+                    ? "WHITE"
+                    : "BLACK"
+            )
+            << std::endl;
+
+        std::cout
+            << "[LICHESS] White: "
+            << updated.whiteUsername
+            << std::endl;
+
+        std::cout
+            << "[LICHESS] Black: "
+            << updated.blackUsername
+            << std::endl;
+
+        std::cout
+            << "[LICHESS] Playing as: "
+            << (
+                updated.playerIsWhite
+                    ? "WHITE"
+                    : "BLACK"
+            )
+            << std::endl;
+
+        updated.active = true;
+        updated.initialized = true;
+
+        {
+            std::lock_guard<std::mutex>
+                lock(eventMutex);
+
+            currentGame =
+                updated;
+        }
+
+        connectionState =
+            LichessConnectionState::
+                InGame;
+
+        return;
+    }
+
+    // ========================================================
+    // GAME STATE
+    // ========================================================
+
+    if (
+        line.find(
+            "\"type\":\"gameState\"") !=
+            std::string::npos ||
+        line.find(
+            "\"type\": \"gameState\"") !=
+            std::string::npos)
+    {
+        std::lock_guard<std::mutex>
+            lock(eventMutex);
+
+        extractJsonString(
+            line,
+            "moves",
+            currentGame.moves);
+
+        extractJsonString(
+            line,
+            "status",
+            currentGame.status);
+
+        extractJsonInteger(
+            line,
+            "wtime",
+            currentGame.whiteTimeMs);
+
+        extractJsonInteger(
+            line,
+            "btime",
+            currentGame.blackTimeMs);
+
+        if (
+            currentGame.status !=
+                "started" &&
+            currentGame.status !=
+                "created")
+        {
+            currentGame.active =
+                false;
+        }
+
+        return;
+    }
+}
+
+void LichessClient::gameStreamLoop(
+    std::string gameId)
+{
+    CURL* curl =
+        curl_easy_init();
+
+    if (!curl)
+    {
+        gameStreamRunning =
+            false;
+
+        return;
+    }
+
+    char errorBuffer[CURL_ERROR_SIZE] = {0};
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_ERRORBUFFER,
+        errorBuffer);
+
+    std::string authorization =
+        "Authorization: Bearer " +
+        token;
+
+    struct curl_slist* headers =
+        nullptr;
+
+    headers =
+        curl_slist_append(
+            headers,
+            authorization.c_str());
+
+    headers =
+        curl_slist_append(
+            headers,
+            "Accept: application/x-ndjson");
+
+    std::string url =
+        "https://lichess.org/api/board/game/stream/" +
+        gameId;
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_URL,
+        url.c_str());
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_HTTPHEADER,
+        headers);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEFUNCTION,
+        gameStreamCallback);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEDATA,
+        this);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_USERAGENT,
+        "ChessR36S/0.1");
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_NOSIGNAL,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_OPTIONS,
+        CURLSSLOPT_NATIVE_CA);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_CAINFO,
+        "external/curl/bin/curl-ca-bundle.crt");
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYPEER,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYHOST,
+        2L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_TCP_KEEPALIVE,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_NOPROGRESS,
+        0L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_XFERINFOFUNCTION,
+        gameStreamProgressCallback);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_XFERINFODATA,
+        this);
+
+    std::cout
+    << "[LICHESS] Connecting to game stream..."
+    << std::endl;
+
+    CURLcode result =
+        curl_easy_perform(
+            curl);
+
+    long httpCode = 0;
+
+    curl_easy_getinfo(
+        curl,
+        CURLINFO_RESPONSE_CODE,
+        &httpCode);
+
+    gameStreamRunning =
+        false;
+
+    if (
+        result != CURLE_OK &&
+        !stopGameStreamRequested)
+    {
+        std::lock_guard<std::mutex>
+            lock(eventMutex);
+
+        if (errorBuffer[0] != '\0')
+        {
+            lastError =
+                errorBuffer;
+        }
+        else
+        {
+            lastError =
+                curl_easy_strerror(
+                    result);
+        }
+
+        std::cerr
+            << "[LICHESS] Game stream error: "
+            << lastError
+            << std::endl;
+    }
+    else if (
+        httpCode < 200 ||
+        httpCode >= 300)
+    {
+        std::lock_guard<std::mutex>
+            lock(eventMutex);
+
+        lastError =
+            "Game stream HTTP error " +
+            std::to_string(
+                httpCode);
+
+        std::cerr
+            << "[LICHESS] "
+            << lastError
+            << std::endl;
+    }
+    else if (
+        !stopGameStreamRequested)
+    {
+        std::cout
+            << "[LICHESS] Game stream ended."
+            << std::endl;
+    }
+
+    curl_slist_free_all(
+        headers);
+
+    curl_easy_cleanup(
+        curl);
+}
+
+bool LichessClient::startGameStream(
+    const std::string& gameId)
+{
+    if (gameId.empty())
+    {
+        lastError =
+            "Cannot start game stream: empty game ID.";
+
+        return false;
+    }
+
+    if (!curlInitialized)
+    {
+        lastError =
+            "Cannot start game stream: libcurl is not initialized.";
+
+        return false;
+    }
+
+    if (token.empty())
+    {
+        lastError =
+            "Cannot start game stream: no Lichess token.";
+
+        return false;
+    }
+
+    // Already running.
+    if (gameStreamRunning)
+    {
+        return true;
+    }
+
+    // Clean up a PREVIOUS thread only if it has already finished.
+    if (gameThread.joinable())
+    {
+        gameThread.join();
+    }
+
+    stopGameStreamRequested =
+        false;
+
+    gameBuffer.clear();
+
+    // ========================================================
+    // IMPORTANT
+    //
+    // Mark it as running BEFORE starting the thread.
+    // Otherwise main() can attempt to start the stream twice
+    // before the new thread has had time to execute.
+    // ========================================================
+
+    gameStreamRunning =
+        true;
+
+    std::cout
+        << "[LICHESS] Starting game stream: "
+        << gameId
+        << std::endl;
+
+    gameThread =
+        std::thread(
+            &LichessClient::gameStreamLoop,
+            this,
+            gameId);
+
+    return true;
+}
+
+void LichessClient::stopGameStream()
+{
+    stopGameStreamRequested =
+        true;
+
+    if (gameThread.joinable())
+    {
+        gameThread.join();
+    }
+
+    gameStreamRunning =
+        false;
+}
+
+bool LichessClient::isGameStreamRunning() const
+{
+    return gameStreamRunning;
+}
+
+LichessGameInfo
+LichessClient::getCurrentGameSnapshot() const
+{
+    std::lock_guard<std::mutex>
+        lock(eventMutex);
+
+    return currentGame;
 }
 
 bool LichessClient::extractJsonString(
@@ -624,6 +1357,9 @@ LichessClient::getCurrentGame()
 
 void LichessClient::clearCurrentGame()
 {
+    std::lock_guard<std::mutex>
+        lock(eventMutex);
+
     currentGame =
         LichessGameInfo{};
 }
@@ -857,16 +1593,45 @@ void LichessClient::processEventLine(
     {
         std::string gameId;
 
-        extractNestedJsonString(
-            line,
-            "game",
-            "id",
-            gameId);
+        // ----------------------------------------------------
+        // Lichess gameStart uses:
+        //
+        // "game": {
+        //     "gameId": "xxxxxxxx",
+        //     ...
+        // }
+        // ----------------------------------------------------
 
-        if (!gameId.empty())
+        bool foundGameId =
+            extractNestedJsonString(
+                line,
+                "game",
+                "gameId",
+                gameId);
+
+        if (
+            !foundGameId ||
+            gameId.empty())
+        {
+            std::cerr
+                << "[LICHESS] gameStart received "
+                << "without a valid gameId."
+                << std::endl;
+
+            return;
+        }
+
+        std::cout
+            << "[LICHESS] gameStart received. ID: "
+            << gameId
+            << std::endl;
+
         {
             std::lock_guard<std::mutex>
                 lock(eventMutex);
+
+            currentGame =
+                LichessGameInfo{};
 
             currentGame.gameId =
                 gameId;
@@ -874,13 +1639,15 @@ void LichessClient::processEventLine(
             currentGame.active =
                 true;
 
+            currentGame.initialized =
+                false;
+
             incomingChallenge =
                 LichessChallenge{};
-
-            connectionState =
-                LichessConnectionState::
-                    InGame;
         }
+
+        connectionState =
+            LichessConnectionState::InGame;
 
         return;
     }
@@ -977,6 +1744,26 @@ void LichessClient::eventStreamLoop()
         curl,
         CURLOPT_NOSIGNAL,
         1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_OPTIONS,
+        CURLSSLOPT_NATIVE_CA);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_CAINFO,
+        "external/curl/bin/curl-ca-bundle.crt");
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYPEER,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYHOST,
+        2L);
 
     eventStreamRunning =
         true;
@@ -1134,6 +1921,8 @@ bool LichessClient::performAuthenticatedPost(
         return false;
     }
 
+    std::string response;
+
     std::string authorization =
         "Authorization: Bearer " +
         token;
@@ -1180,6 +1969,36 @@ bool LichessClient::performAuthenticatedPost(
         curl,
         CURLOPT_NOSIGNAL,
         1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEFUNCTION,
+        writeCallback);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEDATA,
+        &response);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_OPTIONS,
+        CURLSSLOPT_NATIVE_CA);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_CAINFO,
+        "external/curl/bin/curl-ca-bundle.crt");
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYPEER,
+        1L);
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_SSL_VERIFYHOST,
+        2L);
 
     CURLcode result =
         curl_easy_perform(
@@ -1278,3 +2097,83 @@ bool LichessClient::declineIncomingChallenge()
     return result;
 }
 
+bool LichessClient::sendMove(
+    const std::string& gameId,
+    const std::string& move)
+{
+    if (
+        gameId.empty() ||
+        move.empty())
+    {
+        lastError =
+            "Invalid game ID or move.";
+
+        return false;
+    }
+
+    std::string url =
+        "https://lichess.org/api/board/game/" +
+        gameId +
+        "/move/" +
+        move;
+
+    bool success =
+        performAuthenticatedPost(
+            url);
+
+    if (!success)
+    {
+        std::cerr
+            << "[LICHESS] Move rejected: "
+            << move
+            << " - "
+            << lastError
+            << std::endl;
+
+        return false;
+    }
+
+    std::cout
+        << "[LICHESS] Move sent: "
+        << move
+        << std::endl;
+
+    return true;
+}
+
+bool LichessClient::resignGame(
+    const std::string& gameId)
+{
+    if (gameId.empty())
+    {
+        lastError =
+            "No active Lichess game.";
+
+        return false;
+    }
+
+    std::string url =
+        "https://lichess.org/api/board/game/" +
+        gameId +
+        "/resign";
+
+    bool success =
+        performAuthenticatedPost(
+            url);
+
+    if (success)
+    {
+        std::cout
+            << "[LICHESS] Game resigned."
+            << std::endl;
+    }
+    else
+    {
+        std::cerr
+            << "[LICHESS] Could not resign: "
+            << lastError
+            << std::endl;
+    }
+
+    return success;
+}

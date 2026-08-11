@@ -201,3 +201,56 @@ bool ChessClock::isWhiteActive() const
 {
     return whiteActive;
 }
+
+void ChessClock::syncFromServer(
+    int whiteTimeMs,
+    int blackTimeMs,
+    bool whiteToMove,
+    bool shouldRun)
+{
+    whiteMilliseconds =
+        std::max(
+            0LL,
+            static_cast<long long>(
+                whiteTimeMs));
+
+    blackMilliseconds =
+        std::max(
+            0LL,
+            static_cast<long long>(
+                blackTimeMs));
+
+    enabled =
+        whiteTimeMs > 0 ||
+        blackTimeMs > 0;
+
+    whiteActive =
+        whiteToMove;
+
+    running =
+        enabled &&
+        shouldRun &&
+        whiteMilliseconds > 0 &&
+        blackMilliseconds > 0;
+
+    lastUpdate =
+        Clock::now();
+}
+
+void ChessClock::onOnlineMove()
+{
+    if (
+        !enabled ||
+        !running)
+    {
+        return;
+    }
+
+    subtractElapsedTime();
+
+    whiteActive =
+        !whiteActive;
+
+    lastUpdate =
+        Clock::now();
+}

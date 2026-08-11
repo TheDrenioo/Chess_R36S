@@ -195,6 +195,115 @@ void moveVisualCursor(
             7);
 }
 
+void synchronizeOnlineGame(
+    ChessGame& game,
+    const std::string& moves)
+{
+    game.newGame();
+
+    if (moves.empty())
+    {
+        return;
+    }
+
+    std::size_t start = 0;
+
+    while (start < moves.length())
+    {
+        std::size_t end =
+            moves.find(
+                ' ',
+                start);
+
+        std::string move;
+
+        if (
+            end ==
+            std::string::npos)
+        {
+            move =
+                moves.substr(start);
+
+            start =
+                moves.length();
+        }
+        else
+        {
+            move =
+                moves.substr(
+                    start,
+                    end - start);
+
+            start =
+                end + 1;
+        }
+
+        if (move.empty())
+        {
+            continue;
+        }
+
+        MoveSound result =
+            game.makeUCIMove(
+                move);
+
+        if (
+            result ==
+            MoveSound::Illegal)
+        {
+            std::cerr
+                << "Could not synchronize Lichess move: "
+                << move
+                << std::endl;
+
+            break;
+        }
+    }
+}
+
+bool submitOnlineMove(
+    ChessGame& game,
+    LichessClient& lichess,
+    ChessClock& chessClock,
+    const std::string& confirmedServerMoves)
+{
+    LichessGameInfo onlineGame =
+        lichess.getCurrentGameSnapshot();
+
+    if (
+        !onlineGame.active ||
+        onlineGame.gameId.empty())
+    {
+        return false;
+    }
+
+    const std::string& move =
+        game.getLastMoveUCI();
+
+    if (move.empty())
+    {
+        return false;
+    }
+
+    if (!lichess.sendMove(
+            onlineGame.gameId,
+            move))
+    {
+        // Server rejected it.
+        // Restore official Lichess position.
+        synchronizeOnlineGame(
+            game,
+            confirmedServerMoves);
+
+        return false;
+    }
+
+    chessClock.onOnlineMove();
+
+    return true;
+}
+
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -312,6 +421,22 @@ int main(
     bool computerMovePending =
         false;
 
+    std::string lastOnlineMoves;
+
+    bool onlineGameLoaded =
+        false;
+
+    std::string requestedGameStreamId;
+
+    int lastOnlineWhiteTimeMs =
+        -1;
+
+    int lastOnlineBlackTimeMs =
+        -1;
+
+    bool onlineResignConfirm =
+        false;
+
     // ========================================================
     // CONTROLLER
     // ========================================================
@@ -351,6 +476,176 @@ int main(
 
     while (running)
     {
+
+        // ========================================================
+        // LICHESS GAME STREAM START
+        // ========================================================
+
+        {
+            LichessGameInfo onlineGame =
+                lichess.getCurrentGameSnapshot();
+
+            if (
+                onlineGame.active &&
+                !onlineGame.gameId.empty() &&
+                !lichess.isGameStreamRunning() &&
+                requestedGameStreamId !=
+                    onlineGame.gameId)
+            {
+                std::cout
+                    << "[LICHESS] Requesting game stream for: "
+                    << onlineGame.gameId
+                    << std::endl;
+
+                if (
+                    lichess.startGameStream(
+                        onlineGame.gameId))
+                {
+                    requestedGameStreamId =
+                        onlineGame.gameId;
+                }
+                else
+                {
+                    std::cerr
+                        << "[LICHESS] Could not start game stream: "
+                        << lichess.getLastError()
+                        << std::endl;
+                }
+            }
+        }
+
+        // ========================================================
+        // LICHESS GAME SYNCHRONIZATION
+        // ========================================================
+
+        {
+            LichessGameInfo onlineGame =
+                lichess.getCurrentGameSnapshot();
+
+            if (
+                onlineGame.active &&
+                onlineGame.initialized)
+            {
+                // ----------------------------------------------------
+                // FIRST LOAD
+                // ----------------------------------------------------
+
+                if (!onlineGameLoaded)
+                {
+                    currentConfig.mode =
+                        GameMode::Online;
+
+                    currentConfig.humanIsWhite =
+                        onlineGame.playerIsWhite;
+
+                    if (onlineGame.playerIsWhite)
+                    {
+                        currentConfig.opponentName =
+                            onlineGame.blackUsername;
+                    }
+                    else
+                    {
+                        currentConfig.opponentName =
+                            onlineGame.whiteUsername;
+                    }
+
+                    synchronizeOnlineGame(
+                        game,
+                        onlineGame.moves);
+
+                    lastOnlineMoves =
+                        onlineGame.moves;
+
+                    chessClock.syncFromServer(
+                        onlineGame.whiteTimeMs,
+                        onlineGame.blackTimeMs,
+                        game.isWhiteTurn(),
+                        onlineGame.status ==
+                            "started");
+
+                    lastOnlineWhiteTimeMs =
+                        onlineGame.whiteTimeMs;
+
+                    lastOnlineBlackTimeMs =
+                        onlineGame.blackTimeMs;
+
+                    cursorRow =
+                        onlineGame.playerIsWhite
+                            ? 7
+                            : 0;
+
+                    cursorCol = 4;
+
+                    computerMovePending =
+                        false;
+
+                    stockfish.stop();
+
+                    appState =
+                        AppState::Playing;
+
+                    onlineGameLoaded =
+                        true;
+
+                    audio.play(
+                        "start");
+                }
+
+                // ----------------------------------------------------
+                // NEW REMOTE MOVE
+                // ----------------------------------------------------
+
+                else if (
+                    onlineGame.moves !=
+                        lastOnlineMoves ||
+                    onlineGame.whiteTimeMs !=
+                        lastOnlineWhiteTimeMs ||
+                    onlineGame.blackTimeMs !=
+                        lastOnlineBlackTimeMs)
+                {
+                    bool movesChanged =
+                        onlineGame.moves !=
+                        lastOnlineMoves;
+
+                    if (movesChanged)
+                    {
+                        synchronizeOnlineGame(
+                            game,
+                            onlineGame.moves);
+
+                        lastOnlineMoves =
+                            onlineGame.moves;
+
+                        // If after synchronization it is our turn,
+                        // the opponent was the player who just moved.
+                        bool humanTurnNow =
+                            currentConfig.humanIsWhite
+                                ? game.isWhiteTurn()
+                                : !game.isWhiteTurn();
+
+                        if (humanTurnNow)
+                        {
+                            audio.play(
+                                "move-opponent");
+                        }
+                    }
+
+                    chessClock.syncFromServer(
+                        onlineGame.whiteTimeMs,
+                        onlineGame.blackTimeMs,
+                        game.isWhiteTurn(),
+                        onlineGame.status ==
+                            "started");
+
+                    lastOnlineWhiteTimeMs =
+                        onlineGame.whiteTimeMs;
+
+                    lastOnlineBlackTimeMs =
+                        onlineGame.blackTimeMs;
+                }
+            }
+        }
+
         // ====================================================
         // EVENTS
         // ====================================================
@@ -362,24 +657,33 @@ int main(
         {
             chessClock.update();
 
-            if (chessClock.whiteFlagged())
+            // In Online mode Lichess decides
+            // the official result.
+            if (
+                currentConfig.mode !=
+                GameMode::Online)
             {
-                game.declareTimeout(true);
+                if (chessClock.whiteFlagged())
+                {
+                    game.declareTimeout(
+                        true);
 
-                chessClock.stop();
+                    chessClock.stop();
 
-                audio.play(
-                    "checkmate");
-            }
-            else if (
-                chessClock.blackFlagged())
-            {
-                game.declareTimeout(false);
+                    audio.play(
+                        "checkmate");
+                }
+                else if (
+                    chessClock.blackFlagged())
+                {
+                    game.declareTimeout(
+                        false);
 
-                chessClock.stop();
+                    chessClock.stop();
 
-                audio.play(
-                    "checkmate");
+                    audio.play(
+                        "checkmate");
+                }
             }
         }
 
@@ -836,6 +1140,74 @@ int main(
                     event.type ==
                     SDL_KEYDOWN)
                 {
+                if (
+                    currentConfig.mode ==
+                        GameMode::Online &&
+                    onlineResignConfirm)
+                {
+                    // ENTER / SPACE = YES
+                    if (
+                        event.key.keysym.sym ==
+                            SDLK_RETURN ||
+                        event.key.keysym.sym ==
+                            SDLK_SPACE)
+                    {
+                        LichessGameInfo onlineGame =
+                            lichess.getCurrentGameSnapshot();
+
+                        if (
+                            lichess.resignGame(
+                                onlineGame.gameId))
+                        {
+                            chessClock.stop();
+
+                            lichess.stopGameStream();
+
+                            requestedGameStreamId.clear();
+                            lastOnlineMoves.clear();
+
+                            lastOnlineWhiteTimeMs =
+                                -1;
+
+                            lastOnlineBlackTimeMs =
+                                -1;
+
+                            onlineGameLoaded =
+                                false;
+
+                            onlineResignConfirm =
+                                false;
+
+                            lichess.clearCurrentGame();
+
+                            menu.reset();
+
+                            appState =
+                                AppState::Menu;
+
+                            audio.play(
+                                "game-end");
+                        }
+
+                        continue;
+                    }
+
+                    // ESC / BACKSPACE = NO
+                    if (
+                        event.key.keysym.sym ==
+                            SDLK_ESCAPE ||
+                        event.key.keysym.sym ==
+                            SDLK_BACKSPACE)
+                    {
+                        onlineResignConfirm =
+                            false;
+
+                        continue;
+                    }
+
+                    continue;
+                }
+
                     // Promotion
                     if (
                         game.isPromotionPending())
@@ -866,10 +1238,27 @@ int main(
                                 MoveSound sound =
                                     game.confirmPromotion();
 
-                                updateClockAfterMove(
-                                    previousTurn,
-                                    game,
-                                    chessClock);
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    if (!submitOnlineMove(
+                                            game,
+                                            lichess,
+                                            chessClock,
+                                            lastOnlineMoves))
+                                    {
+                                        audio.playMoveSound(
+                                            MoveSound::Illegal);
+                                    }
+                                }
+                                else
+                                {
+                                    updateClockAfterMove(
+                                        previousTurn,
+                                        game,
+                                        chessClock);
+                                }
 
                                 audio.playMoveSound(
                                     sound);
@@ -881,11 +1270,34 @@ int main(
                             }
 
                             case SDLK_ESCAPE:
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    onlineResignConfirm =
+                                        true;
+
+                                    break;
+                                }
                                 game.cancelSelection();
 
                                 chessClock.stop();
 
                                 stockfish.stop();
+
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    lichess.stopGameStream();
+
+                                    requestedGameStreamId.clear();
+
+                                    lastOnlineMoves.clear();
+
+                                    onlineGameLoaded =
+                                        false;
+                                }
 
                                 menu.reset();
 
@@ -908,6 +1320,20 @@ int main(
 
                             stockfish.stop();
 
+                            if (
+                                currentConfig.mode ==
+                                GameMode::Online)
+                            {
+                                lichess.stopGameStream();
+
+                                requestedGameStreamId.clear();
+
+                                lastOnlineMoves.clear();
+
+                                onlineGameLoaded =
+                                    false;
+                            }
+
                             menu.reset();
 
                             appState =
@@ -920,11 +1346,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -941,11 +1369,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -962,11 +1392,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -983,11 +1415,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -1007,8 +1441,9 @@ int main(
 
                             if (
                                 currentConfig.mode ==
-                                GameMode::
-                                    PlayerVsComputer)
+                                    GameMode::PlayerVsComputer ||
+                                currentConfig.mode ==
+                                    GameMode::Online)
                             {
                                 humanCanMove =
                                     currentConfig.humanIsWhite
@@ -1045,12 +1480,32 @@ int main(
                                     sound);
                             }
 
-                            if (!game.isPromotionPending())
+                            if (
+                                !game.isPromotionPending() &&
+                                previousTurn !=
+                                    game.isWhiteTurn())
                             {
-                                updateClockAfterMove(
-                                    previousTurn,
-                                    game,
-                                    chessClock);
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    if (!submitOnlineMove(
+                                            game,
+                                            lichess,
+                                            chessClock,
+                                            lastOnlineMoves))
+                                    {
+                                        audio.playMoveSound(
+                                            MoveSound::Illegal);
+                                    }
+                                }
+                                else
+                                {
+                                    updateClockAfterMove(
+                                        previousTurn,
+                                        game,
+                                        chessClock);
+                                }
                             }
 
                             if (
@@ -1075,6 +1530,12 @@ int main(
                             break;
 
                         case SDLK_r:
+                            if (
+                                currentConfig.mode ==
+                                GameMode::Online)
+                            {
+                                break;
+                            }
 
                             game.newGame();
 
@@ -1112,6 +1573,72 @@ int main(
                     SDL_CONTROLLERBUTTONDOWN)
                 {
                     if (
+                        currentConfig.mode ==
+                            GameMode::Online &&
+                        onlineResignConfirm)
+                    {
+                        // A = YES
+                        if (
+                            event.cbutton.button ==
+                            SDL_CONTROLLER_BUTTON_A)
+                        {
+                            LichessGameInfo onlineGame =
+                                lichess.getCurrentGameSnapshot();
+
+                            if (
+                                lichess.resignGame(
+                                    onlineGame.gameId))
+                            {
+                                chessClock.stop();
+
+                                lichess.stopGameStream();
+
+                                requestedGameStreamId.clear();
+                                lastOnlineMoves.clear();
+
+                                lastOnlineWhiteTimeMs =
+                                    -1;
+
+                                lastOnlineBlackTimeMs =
+                                    -1;
+
+                                onlineGameLoaded =
+                                    false;
+
+                                onlineResignConfirm =
+                                    false;
+
+                                lichess.clearCurrentGame();
+
+                                menu.reset();
+
+                                appState =
+                                    AppState::Menu;
+
+                                audio.play(
+                                    "game-end");
+                            }
+
+                            continue;
+                        }
+
+                        // B = NO
+                        if (
+                            event.cbutton.button ==
+                            SDL_CONTROLLER_BUTTON_B)
+                        {
+                            onlineResignConfirm =
+                                false;
+
+                            audio.play(
+                                "click");
+
+                            continue;
+                        }
+
+                        continue;
+                    }
+                    if (
                         game.isPromotionPending())
                     {
                         switch (
@@ -1143,10 +1670,27 @@ int main(
                                 MoveSound sound =
                                     game.confirmPromotion();
 
-                                updateClockAfterMove(
-                                    previousTurn,
-                                    game,
-                                    chessClock);
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    if (!submitOnlineMove(
+                                            game,
+                                            lichess,
+                                            chessClock,
+                                            lastOnlineMoves))
+                                    {
+                                        audio.playMoveSound(
+                                            MoveSound::Illegal);
+                                    }
+                                }
+                                else
+                                {
+                                    updateClockAfterMove(
+                                        previousTurn,
+                                        game,
+                                        chessClock);
+                                }
 
                                 audio.playMoveSound(
                                     sound);
@@ -1161,6 +1705,20 @@ int main(
                                 chessClock.stop();
 
                                 stockfish.stop();
+
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    lichess.stopGameStream();
+
+                                    requestedGameStreamId.clear();
+
+                                    lastOnlineMoves.clear();
+
+                                    onlineGameLoaded =
+                                        false;
+                                }
 
                                 menu.reset();
 
@@ -1181,11 +1739,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -1203,11 +1763,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -1224,11 +1786,13 @@ int main(
                             if (!game.isGameOver())
                                 {
                                     bool flipped =
+                                    (
                                         currentConfig.mode ==
-                                            GameMode::
-                                                PlayerVsComputer &&
-                                        !currentConfig
-                                            .humanIsWhite;
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                     moveVisualCursor(
                                         cursorRow,
@@ -1245,11 +1809,13 @@ int main(
                             if (!game.isGameOver())
                             {
                                 bool flipped =
-                                    currentConfig.mode ==
-                                        GameMode::
-                                            PlayerVsComputer &&
-                                    !currentConfig
-                                        .humanIsWhite;
+                                    (
+                                        currentConfig.mode ==
+                                            GameMode::PlayerVsComputer ||
+                                        currentConfig.mode ==
+                                            GameMode::Online
+                                    ) &&
+                                    !currentConfig.humanIsWhite;
 
                                 moveVisualCursor(
                                     cursorRow,
@@ -1268,8 +1834,9 @@ int main(
 
                             if (
                                 currentConfig.mode ==
-                                GameMode::
-                                    PlayerVsComputer)
+                                    GameMode::PlayerVsComputer ||
+                                currentConfig.mode ==
+                                    GameMode::Online)
                             {
                                 humanCanMove =
                                     currentConfig.humanIsWhite
@@ -1306,12 +1873,32 @@ int main(
                                     sound);
                             }
 
-                            if (!game.isPromotionPending())
+                            if (
+                                !game.isPromotionPending() &&
+                                previousTurn !=
+                                    game.isWhiteTurn())
                             {
-                                updateClockAfterMove(
-                                    previousTurn,
-                                    game,
-                                    chessClock);
+                                if (
+                                    currentConfig.mode ==
+                                    GameMode::Online)
+                                {
+                                    if (!submitOnlineMove(
+                                            game,
+                                            lichess,
+                                            chessClock,
+                                            lastOnlineMoves))
+                                    {
+                                        audio.playMoveSound(
+                                            MoveSound::Illegal);
+                                    }
+                                }
+                                else
+                                {
+                                    updateClockAfterMove(
+                                        previousTurn,
+                                        game,
+                                        chessClock);
+                                }
                             }
 
                             if (
@@ -1336,6 +1923,12 @@ int main(
                             break;
 
                         case SDL_CONTROLLER_BUTTON_BACK:
+                            if (
+                                currentConfig.mode ==
+                                GameMode::Online)
+                            {
+                                break;
+                            }
 
                             game.newGame();
 
@@ -1362,14 +1955,25 @@ int main(
                             break;
 
                         case SDL_CONTROLLER_BUTTON_START:
-                            chessClock.stop();
 
-                            stockfish.stop();
+                            if (
+                                currentConfig.mode ==
+                                GameMode::Online)
+                            {
+                                onlineResignConfirm =
+                                    true;
+                            }
+                            else
+                            {
+                                chessClock.stop();
 
-                            menu.reset();
+                                stockfish.stop();
 
-                            appState =
-                                AppState::Menu;
+                                menu.reset();
+
+                                appState =
+                                    AppState::Menu;
+                            }
 
                             break;
                     }
@@ -1500,7 +2104,8 @@ int main(
                 cursorCol,
                 boardFlipped,
                 playerName,
-                opponentName);
+                opponentName,
+                onlineResignConfirm);
 
             // =================================================
             // STOCKFISH

@@ -1520,7 +1520,8 @@ void Renderer::render(
     int cursorCol,
     bool boardFlipped,
     const std::string& playerName,
-    const std::string& opponentName)
+    const std::string& opponentName,
+    bool onlineResignConfirm)
 {
     SDL_SetRenderDrawColor(
         renderer,
@@ -1593,6 +1594,11 @@ void Renderer::render(
 
     drawPromotionMenu(
         game);
+
+    if (onlineResignConfirm)
+    {
+        drawOnlineResignConfirmation();
+    }
 
     SDL_RenderPresent(
         renderer);
@@ -3369,4 +3375,65 @@ void Renderer::drawCapturedPieces(
             402,
             1);
     }
+}
+
+void Renderer::drawOnlineResignConfirmation()
+{
+    SDL_SetRenderDrawBlendMode(
+        renderer,
+        SDL_BLENDMODE_BLEND);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        20,
+        20,
+        20,
+        235);
+
+    SDL_Rect box = {
+        170,
+        175,
+        300,
+        130
+    };
+
+    SDL_RenderFillRect(
+        renderer,
+        &box);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        220,
+        70,
+        70,
+        255);
+
+    drawMenuText(
+        "RESIGN GAME?",
+        205,
+        205,
+        3);
+
+    SDL_SetRenderDrawColor(
+        renderer,
+        238,
+        238,
+        210,
+        255);
+
+    drawMenuText(
+        "A YES",
+        220,
+        260,
+        2);
+
+    drawMenuText(
+        "B NO",
+        350,
+        260,
+        2);
+
+    SDL_SetRenderDrawBlendMode(
+        renderer,
+        SDL_BLENDMODE_NONE);
 }

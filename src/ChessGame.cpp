@@ -97,6 +97,7 @@ void ChessGame::newGame()
 
     positionHistory.clear();
     moveHistory.clear();
+    lastMoveUCI.clear();
 
     capturedByWhite.clear();
     capturedByBlack.clear();
@@ -116,6 +117,12 @@ const Piece& ChessGame::getPiece(
     int col) const
 {
     return board[row][col];
+}
+
+const std::string&
+ChessGame::getLastMoveUCI() const
+{
+    return lastMoveUCI;
 }
 
 bool ChessGame::isWhiteTurn() const
@@ -1622,6 +1629,16 @@ MoveSound ChessGame::executeMove(
         move,
         false);
 
+        lastMoveUCI =
+            squareName(
+                move.fromRow,
+                move.fromCol);
+
+        lastMoveUCI +=
+            squareName(
+                move.toRow,
+                move.toCol);
+
     lastMoveFromRow =
     move.fromRow;
 
@@ -1762,6 +1779,12 @@ MoveSound ChessGame::confirmPromotion()
     char promotedType =
         promotionPieces[
             promotionChoice];
+
+    if (!lastMoveUCI.empty())
+    {
+        lastMoveUCI +=
+            promotedType;
+    }
 
     board[promotionRow][promotionCol].type =
         promotionPieces[promotionChoice];

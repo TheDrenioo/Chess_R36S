@@ -39,6 +39,14 @@ public:
 
     bool isWhiteActive() const;
 
+    void syncFromServer(
+        int whiteTimeMs,
+        int blackTimeMs,
+        bool whiteToMove,
+        bool shouldRun);
+
+    void onOnlineMove();
+
 private:
     using Clock =
         std::chrono::steady_clock;

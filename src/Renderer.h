@@ -48,7 +48,8 @@ public:
         int cursorCol,
         bool boardFlipped,
         const std::string& playerName,
-        const std::string& opponentName);
+        const std::string& opponentName,
+        bool onlineResignConfirm);
 
     SDL_Renderer*
     getSDLRenderer();
@@ -89,6 +90,8 @@ private:
         int x,
         int y,
         bool selected);
+
+    void drawOnlineResignConfirmation();
 
     void drawClocks(
         const ChessClock& chessClock,
